@@ -1349,7 +1349,9 @@ global without sharing class PublicRestService {
             Http http = new Http();        
             HttpRequest request = new HttpRequest();
 
-            request.setEndpoint(endpointurl + '/ow/upload.php?filename=' + EncodingUtil.urlEncode(filename, 'UTF-8'));
+            string url = endpointurl + '/ow/upload.php?filename=' + EncodingUtil.urlEncode(filename, 'UTF-8') + '&clientid=' + clientid + '&batchid=' + batchid;
+
+            request.setEndpoint(url);
             request.setMethod('PUT');
             request.setHeader('Content-Type', 'application/octet-stream');
             request.setHeader('Content-Length', String.valueOf(fileBlob.size()));
