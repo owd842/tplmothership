@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Is_Requested_Date_Past</fullName>
+    <active>true</active>
+    <errorConditionFormula>Requested_Delivery_Date__c &lt;  TODAY()</errorConditionFormula>
+    <errorMessage>Requested Date is in the past</errorMessage>
+</ValidationRule>
