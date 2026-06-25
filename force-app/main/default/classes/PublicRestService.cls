@@ -197,6 +197,7 @@ global without sharing class PublicRestService {
     }
     
     public static void LogSys(string msg) {
+
         try {
             string logmsgstr = 'PublicRestService|'+logsessionid + '|' + String.valueOf(logindex) +'|'+msg;
             
@@ -1292,12 +1293,14 @@ global without sharing class PublicRestService {
     // upload.php -- PUT requests
     @HttpPut
     global static void handleRawPut() {
+        string pp = 'handleRawPut';
+
         RestRequest req = RestContext.request;
         RestResponse res = RestContext.response;
 
         String relativeUrl = req.requestURI; 
         
-        LogSys('PUT request: ' + relativeUrl);
+        LogSys(pp +'|' + 'PUT request: ' + relativeUrl);
 
         List<String> pathSegments = relativeUrl.split('/');
         
@@ -1306,7 +1309,9 @@ global without sharing class PublicRestService {
         if ( ! pathSegments.isEmpty() ) {
             endpoint = pathSegments.get(pathSegments.size()-1);
         }
-        
+
+        LogSys(pp +'|' + 'endpoint=' + endpoint);
+
         if ( endpoint.toLowerCase() != 'upload.php' ) {
             res.statusCode = 400;
             res.responseBody = Blob.valueOf('ERROR :: invalid endpoint ['+endpoint+'] -- all PUT requests must be sent to upload.php\r\n');
@@ -1318,6 +1323,8 @@ global without sharing class PublicRestService {
         string filename = kvp.containsKey('filename') ? kvp.get('filename') : '';
         string clientid = kvp.containsKey('clientid') ? kvp.get('clientid') : '';
         string batchid = kvp.containsKey('batchid') ? kvp.get('batchid') : '';
+
+        LogSys(pp +'|' + 'filename=' + filename + '|clientid=' + clientid + '|batchid=' + batchid);
 
         if ( String.isBlank(filename) ) {
             res.statusCode = 400;
