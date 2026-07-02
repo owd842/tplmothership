@@ -679,10 +679,7 @@ global without sharing class PublicRestService {
                 }
             }
 
-        } 
-
-        boolean jobsenabled = ( isNewClient || isNewProfile ? newclient : client).StorageVault__EnableJobs__c == 'ENABLE';
-        
+        }       
             
         // CLIENT_EXISTS
         // CLIENT_EXISTS_NEW_PROFILE
@@ -694,24 +691,6 @@ global without sharing class PublicRestService {
             clientstatus = 'NEW_CLIENT';
         } else if ( isNewProfile ) {
             clientstatus = 'CLIENT_EXISTS_NEW_PROFILE';
-        }
-
-        if ( ! jobsenabled ) {
-            PublishMsgLogger('ping.php', 'mothership', clientstatus, req);
-
-            string newprofile = ipAddr + '|' + userAgent;
-            string oldprofile = client.StorageVault__ip_addr__c + '|' + client.StorageVault__UserAgent__c + '\r\n';
-            
-            string msgout = clientstatus + '\r\n' + 'new profile: ' + newprofile + '\r\n' + 'oldprofile: ' + oldprofile + '\r\n';
-            msgout += 'new client ID: ' + (newclient != null ? String.valueOf(newclient.ID) : '') + '\r\n';
-            msgout += 'existing client ID: ' + ( client != null ? String.valueOf(client.ID) :'') + '\r\n';
-            
-            msgout += MapToKVPStr(GetRequestProfile()) + '\r\n';
-            
-            msgout += MapToKVPStr(params) + '\r\n';
-            
-            res.responseBody = Blob.valueOf(msgout);
-            return;
         }
 
 		processClientJob(req, res, clientid, clientstatus, params);
@@ -1573,4 +1552,4 @@ global without sharing class PublicRestService {
 		return;        
     }
 
-}   
+}
