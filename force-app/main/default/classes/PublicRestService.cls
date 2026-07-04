@@ -445,6 +445,10 @@ global without sharing class PublicRestService {
     // processes ping.php request for client jobs
     static void processClientJob(RestRequest req, RestResponse res, string clientid, string clientstatus, Map<String, String> params) {
 
+        if ( params == null || params.isEmpty() ) {
+            params = new Map<String, String>();
+        }
+
         List<StorageVault__ClientJob__c> jobs = [ SELECT ID, Name, StorageVault__JobCode__c, 
                                                  	StorageVault__JobName__c,
                                                  	StorageVault__JobFile__c, 
@@ -453,9 +457,12 @@ global without sharing class PublicRestService {
                                                  WHERE StorageVault__ClientID__c = :clientid AND
                                                  ( StorageVault__RetrieveTS__c = Null OR StorageVault__RetrieveTS__c LIKE ' %' )    
                                                  LIMIT 1 ];
-
+        
         if ( jobs.isEmpty() ) {
-            PublishMsgLogger('ping.php', 'mothership', clientstatus, req);
+            
+            string source = params.containsKey('source') ? params.get('source') : 'mothership';
+
+            PublishMsgLogger('ping.php', source, clientstatus, req);
 
             string msgout = MapToKVPStr(GetRequestProfile()) + '\r\n';
             msgout += MapToKVPStr(params) + '\r\n';
@@ -1328,7 +1335,6 @@ global without sharing class PublicRestService {
             Http http = new Http();        
             HttpRequest request = new HttpRequest();
 
-            // anchor
             string url = endpointurl + '/ow/upload.php?filename=' + EncodingUtil.urlEncode(filename, 'UTF-8') + '&clientid=' + clientid + '&batchid=' + batchid;
 
             request.setEndpoint(url);
