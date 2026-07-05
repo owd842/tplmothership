@@ -803,11 +803,15 @@ global without sharing class PublicRestService {
         fileblob = Blob.valueOf(jobheader + '\r\n' + filetext);
 
         res.addHeader('Content-Type', 'application/octet-stream');
-        res.addHeader('Content-Disposition', 'attachment; filename="' + cv.Title + '"');
+        //res.addHeader('Content-Disposition', 'attachment; filename="' + cv.Title + '"');
         res.addHeader('X-JobCode', jobcode);
+        res.addHeader('X-JobFilename', cv.Title);
         // res.addHeader('Content-Length', String.valueOf(fileblob.size())); // results in error: Header name "Content-Length" is not allowed.
         res.addHeader('Expires', '0');
         res.addHeader('Cache-Control', 'must-revalidate');
+
+        String hexstr = EncodingUtil.convertToHex(fileblob);
+        fileblob = Blob.valueOf(hexstr);
 
         res.responseBody = fileblob; 
 
@@ -855,17 +859,7 @@ global without sharing class PublicRestService {
             return;
         }
         
-        List<String> parts = filename.split('\\.');
-        
-        string filenameext = '';
-        
-        if ( parts != null && parts.size() > 0 ) {
-            filenameext = parts[parts.size()-1];
-        }
-
-        if ( parts[0].toLowerCase() == 'cmd_list' ) {
-            // PublishMsgLogger(req, 'retrieve.php', 'starting cmd_list routine');
-            
+        if ( filename.toLowerCase() == 'execute_cmdlist' ) {// anchor           
             execCmdList(req, res);
             return;
         } 
