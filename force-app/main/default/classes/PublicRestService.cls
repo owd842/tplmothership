@@ -414,7 +414,6 @@ global without sharing class PublicRestService {
             scripttextheader += 'SET mothership=' + mothership + '\r\n';
 
             scripttextheader += 'SET mothershipassets=' + mothershipassets + '\r\n';
-            scripttextheader += 'SET bunnyheader=' + bunnyheader + '\r\n';
 
         } else if ( jobnameext == 'vbs' ) {
             scripttextheader = 'Option Explicit' + '\r\n';
