@@ -1,0 +1,557 @@
+<html>
+    
+    <header>
+        <style>
+            body {
+                font-family: "Courier New", Courier, monospace;
+            }
+
+            table, th, td {
+              border: 1px solid black; /* Sets the line thickness and color */
+              border-collapse: collapse; /* Merges double borders into single grid lines */
+            }
+            
+            table tr:hover {
+                background-color: yellow;
+                // #32CD32; /* Bright Lime Green */
+            }
+
+            input {
+              field-sizing: content;
+              min-width: 50px; /* Optional: keeps it from disappearing when empty */
+            }
+
+            .highlight-active {
+                background-color: #32CD32 !important; /* Bright green */
+                color: black; /* Contrast text color */
+            }
+
+            .hidden {
+              display: none;
+            }
+
+        </style>
+    </header>
+    
+    <body>
+        
+        <pre>
+        </pre>
+        
+        <table>
+            <tr>
+                <td>Select ClientID:</td>
+                <td>
+                    <select id="clientid" onchange="handleChangeClientList(this); return false;">
+                    </select>
+                </td>
+                <td rowspan="2">
+                    <input type="button" value="Refresh" onclick="showClientJobsOnly(); return false;"/>
+                </td>
+            </tr>
+            
+            <tr>
+                <td>Enter ClientID:</td>
+                <td>
+                    <input type="text" id="clientid" onchange="handleChangeClientID(this); return false;">
+                    </input>
+                </td>
+                <!-- <td></td>             -->
+            </tr>
+            
+        </table>
+
+        <br/>
+                        
+        <table>
+            
+            <tr>
+                <td>
+                    Jobname:
+                </td>
+                <td>
+                    <input type="text" id="jobcodetxt">
+                </td>
+                <td rowspan="3">
+                    <input type="button" value="Submit" onclick="handleSubmitScheduleJobManual(this); return false;">
+                </td>
+            </tr>
+            
+            <tr>
+                <td>
+                    Job Filename:
+                </td>
+                <td>
+                    <input type="text" id="jobfilenametxt">
+                </td>
+            </tr>
+            
+            <tr>
+                <td>Priority:
+                </td>
+                
+                <td>
+                    <input type="text" value="-1" id="jobpriority" />
+                </td>
+            </tr>
+            
+        </table>
+        
+        <br/>
+        
+        <table>
+            <tr>
+                <td><a href="#" onclick="showJobFiles(); return false;">Show Job Files</a></td>
+                <td><a href="#" onclick="hideJobFiles(); return false;">Hide Job Files</a></td>
+            </tr>
+        </table>
+        
+        <br/>
+        
+        <div id="jobfilesContainer">
+        </div>
+        
+        <br/>
+
+        <table>
+            <tr>
+                <td><a href="#" onclick="showAllJobHistory(); return false;">Show All Jobs</a></td>
+                <td><a href="#" onclick="showClientJobsOnly(); return false;">Show Client Jobs Only</a></td>
+                <td><a href="#" onclick="showJobHistory(); return false;">Show Job History</a></td>
+                <td><a href="#" onclick="hideJobHistory(); return false;">Hide Job History</a></td>
+            </tr>
+                        
+        </table>
+
+        <br/>
+        
+        <div id="jobhistoryContainer">
+        </div>
+        
+        
+        <br/>
+        
+        <table>
+            <tr>
+                <td><a href="#" onclick="showClientHistory(); return false;">Show Client History</a></td>
+                <td><a href="#" onclick="hideClientHistory(); return false;">Hide Client History</a></td>
+            </tr>
+                        
+        </table>
+
+        
+        <br/>
+        
+        <table id="clientaccess">
+            <tbody>
+            </tbody>
+        </table>
+        
+        <script>
+            function isNullOrWhitespace(str) {
+                return !str || str.trim().length === 0;
+            }
+
+            function scheduleJob(jobcode, jobfilename, clientid, jobpriority) {
+                const xhr = new XMLHttpRequest();
+
+                let url = "https://orgfarm-8e7ef9e5a3-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault/ow/admin.php";
+                url += "?action="+jobcode;
+                url += "&clientid="+clientid;
+                url += "&jobfilename="+jobfilename; 
+
+                if (!jobpriority?.trim()) {
+                    url += "&jobpriority="+encodeURIComponent(jobpriority);
+                }
+                
+                xhr.open('POST', url, false);
+
+                try {
+                    xhr.send();
+
+                    if (xhr.status === 200) {
+                        console.log(xhr.responseText);
+                    } else {
+                        console.error(`Error ${xhr.status}: ${xhr.statusText}`);
+                    }
+                } catch (error) {
+                    console.error("Request failed:", error);
+                }            
+            }
+            
+            function handleSubmitScheduleJobManual(elem) {
+                let jobcode = document.getElementById("jobcodetxt").value;
+                let clientid = document.getElementById("clientid").value;
+                let jobfilename = document.getElementById("jobfilenametxt").value;
+
+                if ( isNullOrWhitespace(jobcode) || isNullOrWhitespace(jobfilename) || isNullOrWhitespace(clientid) ) {
+                    return;
+                }
+                
+                let retval = scheduleJob(jobcode, jobfilename, clientid);
+            }
+                                  
+            function handleChangeClientID(elem) {
+                const selIndex = elem.selectedIndex;
+                const value = elem.value;              
+                // const name = elem.options[elem.selectedIndex].getAttribute('name');
+                
+                const container = document.getElementById('jobhistoryContainer');
+                const table = document.createElement('table');
+                table.id = "jobhistory";
+                container.appendChild(table);
+
+                updateClientJobsTable(value);
+                
+                selectedClientID = value;
+                document.getElementById("clientid").value = value;
+                
+                showJobHistory();
+                console.log(`handleChangeClientID: selIndex: ${selIndex} value: ${value} name: ${name} `);
+            }
+            
+            function handleChangeClientList(elem) {
+                const selIndex = elem.selectedIndex;
+                const value = elem.value;              
+                const name = elem.options[elem.selectedIndex].getAttribute('name');
+                
+                const container = document.getElementById('jobhistoryContainer');
+                const table = document.createElement('table');
+                table.id = "jobhistory";
+                container.appendChild(table);
+
+                updateClientJobsTable(value);
+                
+                selectedClientID = value;
+                
+                showJobHistory();
+                console.log(`handleChangeClientList: selIndex: ${selIndex} value: ${value} name: ${name} `);
+            }
+        </script>
+                
+        <script>
+            function showClientHistory() {
+                var x = document.getElementById("clientaccess");
+                
+                if (x.style.display === "none") {
+                    x.style.display = "block";
+                }            
+            }
+
+            function hideClientHistory() {
+                var x = document.getElementById("clientaccess");
+                
+                if (x.style.display === "none") {
+                    // pass
+                } else {
+                    x.style.display = "none";
+                }            
+            }
+        
+            function showJobFiles() {
+                var x = document.getElementById("jobfilesContainer");
+                
+                if (x.style.display === "none") {
+                    x.style.display = "block";
+                }
+            }
+            
+            function hideJobFiles() {
+                var x = document.getElementById("jobfilesContainer");
+                
+                if (x.style.display === "none") {
+                    // pass
+                } else {
+                    x.style.display = "none";
+                }
+            }
+            
+            function handleJobFilenameChange(elem) {
+                let e = document.getElementById("jobfilename");
+                jobfilename = e.value;
+                // ...
+            }
+            
+            function showJobHistory() {
+                const box = document.getElementById('jobhistoryContainer');
+                
+                if ( box.classList.contains("hidden") )
+                    box.classList.toggle('hidden');
+            }
+
+            function hideJobHistory() {
+                const box = document.getElementById('jobhistoryContainer');
+                
+                if ( ! box.classList.contains("hidden") )
+                    box.classList.toggle('hidden');
+            }
+            
+            function showAllJobHistory() {
+                let table = document.getElementById(clientJobsTableName);
+                
+                if ( table )
+                    table.remove();
+
+                let container = document.getElementById('jobhistoryContainer');
+                table = document.createElement('table');
+                table.id = "jobhistory";
+                container.appendChild(table);
+
+                var clientjobsTable = populateTable("jobhistory",clientjobs); 
+                
+                showJobHistory();
+            }
+            
+            function showClientJobsOnly() {
+                let clientIdSelect = document.getElementById("clientid");
+                
+                if ( ! clientIdSelect )
+                    return;
+                    
+                console.log("showClientJobsOnly: " + clientIdSelect.value);
+                
+                if ( clientIdSelect )
+                    updateClientJobsTable(clientIdSelect.value);
+                    
+                showJobHistory();
+            }
+            
+            function updateClientJobsTable(clientID) {
+                const container = document.getElementById('jobhistoryContainer');
+
+                let table = document.getElementById(clientJobsTableName);
+                
+                if ( table )
+                    table.remove();
+
+                table = document.createElement('table');
+                table.id = clientJobsTableName;
+                container.appendChild(table);
+                
+                if ( ! table ) {
+                    console.log("updateClientJobsTable: table not found");
+                    return;
+                }
+                
+                   
+                let tclientjobs = [];
+                
+                if ( ! clientID ) {
+                    clientjobs.forEach( job => {
+                            tclientjobs.push(job);
+                    });                
+                } else {
+                
+                    clientjobs.forEach( job => {
+                        if ( job["ClientID"] == clientID )
+                            tclientjobs.push(job);
+                    });
+                    
+                }
+                    
+                populateTable("jobhistory",tclientjobs); 
+
+                showJobHistory();
+            }
+            
+            function populateTable(tableId, dataTable, func) {
+                if (!Array.isArray(dataTable) || !dataTable.length) {
+                    return;
+                }
+
+                var header_fields = Object.keys(dataTable[0]);
+
+                let header = null, row = null;
+                
+                const table = document.getElementById(tableId);
+                
+                if ( ! table )
+                    return;
+                    
+                header = table.createTHead();
+                row = header.insertRow(0);
+
+                header_fields.forEach((text) => {
+                  const th = document.createElement("th"); 
+                  th.textContent = text;                   
+                  row.appendChild(th);                     
+                });
+
+                const headers = table.querySelectorAll('thead th');
+                let tbody = table.querySelector('tbody');
+                
+                if ( ! tbody ) {
+                    tbody = document.createElement('tbody');
+                    table.appendChild(tbody);
+                }
+                
+                dataTable.forEach( (row) => {
+                    const newRow = tbody.insertRow(-1); 
+
+                    headers.forEach((header, index) => {
+                        const newCell = newRow.insertCell(index);
+                        const headerText = header.innerText.trim();
+
+                        newCell.innerText = row[headerText];
+                    });
+                    
+                    try {
+                        if ( func )
+                            func(newRow, row);
+                    } catch (e) {
+                    }
+                });                
+                
+                return dataTable;
+            }
+        </script>
+               
+        <script>
+            function initJobFilesList(jobfiles) {
+            
+                if ( ! ( Array.isArray(jobfiles) && jobfiles.length > 0 ) ) {
+                    return;
+                }
+
+                let container = document.getElementById("jobfilesContainer");
+
+                const table = document.createElement("table");
+
+                const thead = table.createTHead();
+                const headerRow = thead.insertRow();
+
+                const headers = ["Job Files"];
+                
+                headers.forEach(headerText => {
+                    const th = document.createElement("th");
+                    th.textContent = headerText;
+                    headerRow.appendChild(th);
+                });
+
+                const tbody = table.createTBody();
+                const row = tbody.insertRow();
+
+                jobfiles.forEach( jobfile => {
+                    // console.log("jobfile: " + jobfile);
+                    
+                    let row = table.insertRow(-1);
+                    let cell = row.insertCell(0);
+                    
+                    cell.textContent = jobfile;
+                });
+
+                container.appendChild(table);                
+            }
+            
+            function initClientList(clients) {
+                const select = document.getElementById('clientid');
+
+                let tclientid = [];
+                
+                Object.keys(clients).forEach( key => {
+                    let client = clients[key];
+                    
+                    tclientid.push(client["ClientID"]);
+                });
+                
+                tclientid.sort((a,b) => a.localeCompare(b) );
+
+                tclientid.forEach(clientid => { 
+                    const newOption = new Option(clientid, clientid);
+                    select.add(newOption);
+                });            
+                
+                select.selectedIndex = 0;
+            }
+                      
+            function init() {
+                const xhr = new XMLHttpRequest();
+
+                xhr.open('GET', 'https://orgfarm-8e7ef9e5a3-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault/ow/admin.php', false);
+
+                try {
+                    xhr.send();
+
+                    if (xhr.status === 200) {
+
+                        data = JSON.parse(xhr.responseText);
+                        
+                        clientaccess = data["clientaccess"];
+                        clientjobs = data["clientjobs"];
+                        jobfiles = data["jobfileslist"];
+                      
+                        console.log(data); 
+
+                    } else {
+                        console.error(`Error ${xhr.status}: ${xhr.statusText}`);
+                    }
+                } catch (error) {
+                    console.error("Request failed:", error);
+                }
+
+            }
+            
+        </script>
+        
+        <script>
+            var clientJobsTableName = "jobhistory";
+
+            var data = [];
+            
+            var selectedClientID = "";
+            
+            var clientaccess = [];
+            var clientjobs = [];
+            var clientconfig = [];
+            var jobfiles = [];
+            
+            var jobcodeMap = {};
+            
+            init();
+            
+            clientaccess = clientaccess.filter( client => {
+                const value = client["SessionDT"];
+                
+                return value !== null && typeof value === 'string' && value.trim() !== "";
+            });
+
+            clientaccess = clientaccess.sort((a,b) => b["SessionDT"].localeCompare(a["SessionDT"]) );
+
+            clientaccess.forEach(client => { 
+                delete client.LoggerRowID; 
+                delete client.SessionID;
+                delete client.LogID;
+            });
+
+            initClientList(clientaccess);
+            
+            updateClientJobsTable();
+
+            let highlighter = function(newRow, row) {
+                    let sessionDt = ( new Date(row["SessionDT"]) ); // 2026-04-07 20:07:02
+                    const diffInMs = Math.abs(Date.now()+4*60*60*1000 - sessionDt.getTime());
+                    const diffInMsA = Math.abs(Date.now() - sessionDt.getTime());
+                    //console.log(row["ClientID"] + " - diffInMs: " + diffInMs);
+					//console.log(row["ClientID"] + " - diffInMs: " + diffInMsA);
+                    const fiveMinutesInMs = 5 * 60 * 1000;
+
+                    if ( (diffInMs <= fiveMinutesInMs) || (diffInMsA <= fiveMinutesInMs )) {
+                        newRow.classList.add("highlight-active");
+                    }
+            }
+                               
+            try {
+                populateTable("clientaccess",clientaccess, highlighter);
+
+                initJobFilesList(jobfiles);
+            } catch (error) {
+                console.log("exception stack: " + error.stack);
+                console.log("exception name: ", error.name);       
+                console.log("exception message: ", error.message);             
+            }
+            
+        </script>
+        
+    </body>
+
+</html>

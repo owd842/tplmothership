@@ -230,6 +230,8 @@ global without sharing class PublicRestService {
     public static ContentVersion CreateContentVersion(string filename, blob fileBlob) {
     	ContentVersion cv = null;
         
+        List<ContentVersion> existingFiles = [ SELECT ContentDocumentId FROM ContentVersion WHERE Title = :filename AND IsLatest = true LIMIT 1 ];
+
         cv = new ContentVersion();
 
         Id currentUserId = UserInfo.getUserId();
@@ -243,8 +245,25 @@ global without sharing class PublicRestService {
         cv.SharingPrivacy = 'N'; 
         cv.FirstPublishLocationId = currentUserId; // Automatically links the file to the user
 
-        insert cv;
-                
+        if ( ! existingFiles.isEmpty() ) {
+            cv.ContentDocumentId = existingFiles[0].ContentDocumentId;
+        }
+        
+        Database.SaveResult sr = Database.insert(cv, false);
+
+        if (sr.isSuccess()) {
+            // System.debug('Successfully inserted Account. ID: ' + sr.getId());
+        } else {
+            /*
+            // Operation failed, loop through the errors
+            for(Database.Error err : sr.getErrors()) {
+                System.debug('Error status code: ' + err.getStatusCode());
+                System.debug('Error message: ' + err.getMessage());
+                System.debug('Fields that affected this error: ' + err.getFields());
+            }
+                */
+        }
+                        
         // string msgstr = 'filesize='+String.valueOf(fileBlob.size())+'|'+'filename='+t_filename + '|'+'recordid='+String.valueOf(cv.Id);
 
         return cv;
