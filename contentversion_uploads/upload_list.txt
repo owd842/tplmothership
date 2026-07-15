@@ -1,1 +1,1 @@
-cmd_list_test.bat 
+test_python_script.py 

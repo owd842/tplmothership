@@ -3,7 +3,7 @@ setlocal enabledelayedexpansion
 set "CURRENT_DRIVE=%~d0"
 echo The script is running from drive: %CURRENT_DRIVE%
 
-set uploaddir=%CURRENT_DRIVE%\WORKING\hacking_WORK\http_web_smtp_email_hosting\salesforce\src\content_version
+set uploaddir=%CURRENT_DRIVE%\WORKING\hacking_WORK\DevOps\git_repo\tplmothership\contentversion_uploads
 cd /d %uploaddir%
 
 echo %CD%
@@ -19,7 +19,8 @@ REM set mothership=https://orgfarm-8e7ef9e5a3-dev-ed.develop.my.salesforce-sites
 type nul > curl.log
 type nul > upload_list.txt
 
-echo cmd_list_test.bat >> upload_list.txt
+echo test_python_script.py >> upload_list.txt
+REM echo cmd_list_test.bat >> upload_list.txt
 REM echo admin.html >> upload_list.txt
 REM echo cmd_list_snapshot_full.bat >> upload_list.txt
 REM echo cmd_list_install_python.bat >> upload_list.txt

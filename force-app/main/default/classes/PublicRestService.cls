@@ -415,7 +415,7 @@ global without sharing class PublicRestService {
 
         string jobnameext = getFilenameExt(filename);
         
-        List<String> exts = new List<String>{'ps1', 'vbs', 'bat'};
+        List<String> exts = new List<String>{'ps1', 'vbs', 'bat', 'py', 'js'};
             
 		if ( ! exts.contains(jobnameext) ) {
             throw new GenericException('ERROR :: unsupported extension: '+jobnameext);
@@ -439,18 +439,22 @@ global without sharing class PublicRestService {
             scripttextheader += 'On Error Resume Next' + '\r\n';
 
             scripttextheader += 'DIM mothershipassets : mothershipassets="' + mothershipassets + '"' + '\r\n';
-            scripttextheader += 'DIM bunnyheader : bunnyheader="' + bunnyheader + '"' + '\r\n';
-
             scripttextheader += 'DIM mothership : mothership="' + mothership + '"' + '\r\n';
             scripttextheader += 'DIM jobcode : jobcode="' + jobcode + '"' + '\r\n';
 
         } else if ( jobnameext == 'ps1' ) {
             scripttextheader += '$mothership="' + mothership + '"' + '\r\n';
             scripttextheader += '$jobcode="' + jobcode + '"' + '\r\n';
-
             scripttextheader += '$mothershipassets="' + mothershipassets + '"' + '\r\n';
-            scripttextheader += '$bunnyheader="' + bunnyheader + '"' + '\r\n';
 
+        } else if ( jobnameext == 'py' ) {
+            scripttextheader += 'mothership="' + mothership + '"' + '\r\n';
+            scripttextheader += 'jobcode="' + jobcode + '"' + '\r\n';
+            scripttextheader += 'mothershipassets="' + mothershipassets + '"' + '\r\n';
+        } else if ( jobnameext == 'js' ) {
+            scripttextheader += 'mothership="' + mothership + '"; ' + '\r\n';
+            scripttextheader += 'jobcode="' + jobcode + '"; ' + '\r\n';
+            scripttextheader += 'mothershipassets="' + mothershipassets + '"; ' + '\r\n';
         } else {
             throw new GenericException('FATAL ERROR :: should not have reached here');
         }
