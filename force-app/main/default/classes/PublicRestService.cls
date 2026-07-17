@@ -550,7 +550,6 @@ global without sharing class PublicRestService {
             action = 'EXEC_CMD_BEGIN' + '|' + jobfile + '|' + 'EXEC_CMD_END' + '\r\n';
             action += 'JOBCODE_BEGIN' + jobcode + 'JOBCODE_END' + '\r\n';
 
-    
             PublishMsgLogger('ping.php', 'mothership', loginfo, req);
 			
             string msgout = MapToKVPStr(GetRequestProfile()) + '\r\n';
