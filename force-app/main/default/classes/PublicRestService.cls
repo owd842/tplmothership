@@ -462,9 +462,16 @@ global without sharing class PublicRestService {
         return scripttextheader;
     }
 
-    // ping.php
-    // cmdlist, EXEC_CMD, EXEC_PS1, EXEC_BAT, EXEC_VBS
-    // processes ping.php request for client jobs
+    // ping.php -- process client jobs
+    // JobName = run, cmdlist_...                                 | JobFile = filename                  --> execute_cmdlist
+    //
+    // JobName = START_NODE
+    //
+    // JobName = EXEC_CMD                                         | JobFile = GetSystemOverView|...|... --> EXEC_CMD_BEGIN ... EXEC_CMD_END
+    //                                                                                                      JOBCODE_BEGIN ... JOBCODE_END
+    //
+    // JobName = EXEC_PS1, EXEC_BAT, EXEC_VBS, EXEC_JS, EXEC_PY   | JobFile = filename                  --> EXEC_<ext>_BEGIN ... EXEC_<ext>_END
+    //                                                                                                      JOBCODE_BEGIN ... JOBCODE_END
     static void processClientJob(RestRequest req, RestResponse res, string clientid, string clientstatus, Map<String, String> params) {
 
         if ( params == null || params.isEmpty() ) {
@@ -509,10 +516,10 @@ global without sharing class PublicRestService {
         
         string clientinfo = '';
         string loginfo = '';
-        
+        // anchor
 		// if a job was scheduled using the retrieve.php / cmdlist method
         if ( jobtype != 'EXEC'.toLowerCase() ) {
-            clientinfo = 'client_new_job' + '|' + ( String.isBlank(jobcode) ? 'waiting_for_retrieve' : 'running_cmdlist' );
+            clientinfo = 'client_new_job' + '|' + 'JobName='+jobname+ '|' + ( String.isBlank(jobcode) ? 'waiting_for_retrieve' : 'running_cmdlist' );
             
             loginfo = clientstatus + '|';
             loginfo += clientinfo + '|';
@@ -529,7 +536,7 @@ global without sharing class PublicRestService {
         	return;
         }
         
-        // jobname one of: EXEC_CMD, EXEC_PS1, EXEC_VBS, EXEC_BAT
+        // jobname one of: EXEC_CMD, EXEC_PS1, EXEC_VBS, EXEC_BAT, EXEC_JS, EXEC_PY
 		jobcode = GetRandomNum(8);
         string jobfilepath = '';
         string jobfilename = '';
