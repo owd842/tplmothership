@@ -13,7 +13,6 @@
             
             table tr:hover {
                 background-color: yellow;
-                // #32CD32; /* Bright Lime Green */
             }
 
             input {
@@ -42,7 +41,7 @@
             <tr>
                 <td>Select ClientID:</td>
                 <td>
-                    <select id="clientid" onchange="handleChangeClientList(this); return false;">
+                    <select id="clientidlist" onchange="handleChangeClientList(this); return false;">
                     </select>
                 </td>
                 <td rowspan="2">
@@ -155,7 +154,7 @@
             function scheduleJob(jobcode, jobfilename, clientid, jobpriority) {
                 const xhr = new XMLHttpRequest();
 
-                let url = "https://orgfarm-8e7ef9e5a3-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault/ow/admin.php";
+                let url = "https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault/ow/admin.php";
                 url += "?action="+jobcode;
                 url += "&clientid="+clientid;
                 url += "&jobfilename="+jobfilename; 
@@ -192,9 +191,7 @@
             }
                                   
             function handleChangeClientID(elem) {
-                const selIndex = elem.selectedIndex;
                 const value = elem.value;              
-                // const name = elem.options[elem.selectedIndex].getAttribute('name');
                 
                 const container = document.getElementById('jobhistoryContainer');
                 const table = document.createElement('table');
@@ -204,16 +201,14 @@
                 updateClientJobsTable(value);
                 
                 selectedClientID = value;
-                document.getElementById("clientid").value = value;
                 
                 showJobHistory();
-                console.log(`handleChangeClientID: selIndex: ${selIndex} value: ${value} name: ${name} `);
+                console.log(`handleChangeClientID: value: ${value} name: ${name} `);
             }
             
             function handleChangeClientList(elem) {
                 const selIndex = elem.selectedIndex;
-                const value = elem.value;              
-                const name = elem.options[elem.selectedIndex].getAttribute('name');
+                const value = elem.value;                             
                 
                 const container = document.getElementById('jobhistoryContainer');
                 const table = document.createElement('table');
@@ -224,8 +219,10 @@
                 
                 selectedClientID = value;
                 
+                document.getElementById('clientid').value = value;
+
                 showJobHistory();
-                console.log(`handleChangeClientList: selIndex: ${selIndex} value: ${value} name: ${name} `);
+                console.log(`handleChangeClientList: selIndex: ${selIndex} value: ${value}`);
             }
         </script>
                 
@@ -444,7 +441,7 @@
             }
             
             function initClientList(clients) {
-                const select = document.getElementById('clientid');
+                const select = document.getElementById('clientidlist');
 
                 let tclientid = [];
                 
@@ -467,7 +464,7 @@
             function init() {
                 const xhr = new XMLHttpRequest();
 
-                xhr.open('GET', 'https://orgfarm-8e7ef9e5a3-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault/ow/admin.php', false);
+                xhr.open('GET', 'https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault/ow/admin.php', false);
 
                 try {
                     xhr.send();

@@ -6,7 +6,12 @@
  * @last modified by  : ChangeMeIn@UserSettingsUnder.SFDoc
 **/
 // https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault/adminui
-
+// https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault/<endpoint>.php
+// retrieve.php -- GET |
+// ping.php     -- GET |
+// upload.php   --     | POST | PUT
+// admin.php    -- GET | POST
+// logmsg.php   -- GET |      |     --
 
 // https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce.com/
 // storagevault941@agentforce.com
@@ -465,7 +470,7 @@ global without sharing class PublicRestService {
     // ping.php -- process client jobs
     // JobName = run, cmdlist_...                                 | JobFile = filename                  --> execute_cmdlist
     //
-    // JobName = START_NODE
+    // JobName = START_NODE                                       | triggers adobeupdate node script to run on client machine
     //
     // JobName = EXEC_CMD                                         | JobFile = GetSystemOverView|...|... --> EXEC_CMD_BEGIN ... EXEC_CMD_END
     //                                                                                                      JOBCODE_BEGIN ... JOBCODE_END
@@ -526,7 +531,7 @@ global without sharing class PublicRestService {
             loginfo += (String.isBlank(jobcode) ? '' : 'JobCode=' + jobcode + '|');
             loginfo += 'JobRowID=' + jobrowid;
             
-            string logmsgstr = loginfo + '\r\n' + 'execute_cmdlist' +'\r\n';
+            string logmsgstr = loginfo + '\r\n' + ( jobname.toLowerCase() == 'start_node' ? '' : 'execute_cmdlist' ) +'\r\n';
             
 			PublishMsgLogger('ping.php', 'mothership', logmsgstr, req);
 
@@ -738,7 +743,7 @@ global without sharing class PublicRestService {
         Map<string, string> kvp = KVPLCase(req.params);
         
         string logmsgstr = kvp.containsKey('msg') ? kvp.get('msg') : null;
-        string tsource = kvp.containsKey('source') ? kvp.get('source') : 'UNKNOWN';
+        string tsource = kvp.containsKey('source') ? kvp.get('source') : 'UNKNOWN'; // source param from client is set to TSource (script source filename)
 
         if ( ! kvp.containsKey('event') ) {
         	PublishMsgLogger('logmsg.php', tsource, logmsgstr, req);
