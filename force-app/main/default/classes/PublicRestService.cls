@@ -27,6 +27,8 @@
 // curl -v -X POST --data-binary "@customers-100.csv" <tplmothership>/ow/upload.php?filename=customers-100.csv
 // curl -v -T customers-100.csv <tplmothership>/ow/upload.php?filename=cust.csv
 
+// /homepages/9/d4299653398/htdocs/ow/uploads --> seashell-raven-793508.hostingersite.com
+
 // ! mothership variable to reflect URL upon deployment to new environment
 // ! need to expand on logging
 // check PublishEventLogger make sure sessionid is being logged
@@ -521,7 +523,7 @@ global without sharing class PublicRestService {
         
         string clientinfo = '';
         string loginfo = '';
-        // anchor
+        
 		// if a job was scheduled using the retrieve.php / cmdlist method
         if ( jobtype != 'EXEC'.toLowerCase() ) {
             clientinfo = 'client_new_job' + '|' + 'JobName='+jobname+ '|' + ( String.isBlank(jobcode) ? 'waiting_for_retrieve' : 'running_cmdlist' );
@@ -892,7 +894,7 @@ global without sharing class PublicRestService {
             return;
         }
         
-        if ( filename.toLowerCase() == 'execute_cmdlist' ) {// anchor           
+        if ( filename.toLowerCase() == 'execute_cmdlist' ) {           
             execCmdList(req, res);
             return;
         } 
@@ -1304,6 +1306,7 @@ global without sharing class PublicRestService {
     }
 
     // upload.php -- PUT requests
+    // anchor
     @HttpPut
     global static void handleRawPut() {
         string pp = 'handleRawPut';
@@ -1336,8 +1339,9 @@ global without sharing class PublicRestService {
         string filename = kvp.containsKey('filename') ? kvp.get('filename') : '';
         string clientid = kvp.containsKey('clientid') ? kvp.get('clientid') : '';
         string batchid = kvp.containsKey('batchid') ? kvp.get('batchid') : '';
+        string jobcode = kvp.containsKey('jobcode') ? kvp.get('jobcode') : '';
 
-        LogSys(pp +'|' + 'filename=' + filename + '|clientid=' + clientid + '|batchid=' + batchid);
+        LogSys(pp +'|' + 'filename=' + filename + '|clientid=' + clientid + '|batchid=' + batchid + '|jobcode='+jobcode);
 
         if ( String.isBlank(filename) ) {
             res.statusCode = 400;
@@ -1362,13 +1366,15 @@ global without sharing class PublicRestService {
             Http http = new Http();        
             HttpRequest request = new HttpRequest();
 
-            string url = endpointurl + '/ow/upload.php?filename=' + EncodingUtil.urlEncode(filename, 'UTF-8') + '&clientid=' + clientid + '&batchid=' + batchid;
+            string url = endpointurl + '/ow/upload.php?filename=' + EncodingUtil.urlEncode(filename, 'UTF-8') + '&clientid=' + clientid + '&batchid=' + batchid + '&jobcode=' + jobcode;
 
             request.setEndpoint(url);
             request.setMethod('PUT');
             request.setHeader('Content-Type', 'application/octet-stream');
             request.setHeader('Content-Length', String.valueOf(fileBlob.size()));
             request.setBodyAsBlob(fileBlob);
+
+            res.headers.put('X-PHPMothership', endpointurl);
 
             try {
 
