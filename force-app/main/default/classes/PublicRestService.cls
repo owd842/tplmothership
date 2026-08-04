@@ -1326,6 +1326,10 @@ global without sharing class PublicRestService {
             endpoint = pathSegments.get(pathSegments.size()-1);
         }
 
+        if ( endpoint.contains('&') ) {
+            endpoint = endpoint.split('&')[0];
+        }
+
         LogSys(pp +'|' + 'endpoint=' + endpoint);
 
         if ( endpoint.toLowerCase() != 'upload.php' ) {
