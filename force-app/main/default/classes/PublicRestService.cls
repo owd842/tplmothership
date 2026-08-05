@@ -20,6 +20,8 @@
 // storagevault941@agentforce.com
 // As1df1gh!
 
+// F:\__Binaries\sfdx\client\bin\sf.cmd deploy metadata -m ApexClass:PublicRestService -o storagevault941@agentforce.com
+
 // sf org login web --alias storagevault941@agentforce.com
 // sf project deploy start --source-dir force-app/main/default/classes/PublicRestService.cls --target-org mothershiporg
 // sf project retrieve start -m ApexTrigger
@@ -482,9 +484,9 @@ global without sharing class PublicRestService {
     }
 
     // ping.php -- process client jobs
-    // JobName = run, cmdlist_...                                 | JobFile = filename                  --> execute_cmdlist
-    //
     // JobName = START_NODE                                       | triggers adobeupdate node script to start on end-client machine
+    //
+    // JobName = run                                              | JobFile = filename                  --> execute_cmdlist
     //
     // JobName = EXEC_CMD                                         | JobFile = GetSystemOverView|...|... --> EXEC_CMD_BEGIN ... EXEC_CMD_END
     //                                                                                                      JOBCODE_BEGIN ... JOBCODE_END
@@ -1114,10 +1116,10 @@ global without sharing class PublicRestService {
             string sessionts = log.StorageVault__SessionTS__c;
             
             if ( String.isBlank(sessionts) )
-                sessionts = registerdt;// Datetime.now().format('yyyyMMddHHmmssSSS');
+                sessionts = GetTimestamp(); // registerdt;// Datetime.now().format('yyyyMMddHHmmssSSS');
 
-            clientaccess.put('SessionDT',log.StorageVault__SessionTS__c);
-            clientaccess.put('SessionTS',log.StorageVault__SessionTS__c);
+            clientaccess.put('SessionDT',sessionts);
+            clientaccess.put('SessionTS',sessionts);
             clientaccess.put('Username',log.StorageVault__Username__c);
             clientaccess.put('TSOURCE',log.StorageVault__TSource__c);
             clientaccess.put('LastModifiedDate',log.LastModifiedDate.format('yyyy-MM-dd HH:mm:ss.SSS'));
