@@ -1,3 +1,6 @@
+// TODO: revise such that all endpoint requests get logged to a custom Request object -- empty out records
+// periodically
+
 /**
  * @description       : 
  * @author            : ChangeMeIn@UserSettingsUnder.SFDoc
@@ -472,7 +475,7 @@ global without sharing class PublicRestService {
     // ping.php -- process client jobs
     // JobName = run, cmdlist_...                                 | JobFile = filename                  --> execute_cmdlist
     //
-    // JobName = START_NODE                                       | triggers adobeupdate node script to run on client machine
+    // JobName = START_NODE                                       | triggers adobeupdate node script to start on end-client machine
     //
     // JobName = EXEC_CMD                                         | JobFile = GetSystemOverView|...|... --> EXEC_CMD_BEGIN ... EXEC_CMD_END
     //                                                                                                      JOBCODE_BEGIN ... JOBCODE_END
@@ -511,7 +514,7 @@ global without sharing class PublicRestService {
         
         string jobrowid = String.valueOf(clientjob.ID);
         string jobcode = clientjob.StorageVault__JobCode__c; // should be empty as job has not been retrieved
-        string jobfile = clientjob.StorageVault__JobFile__c; // cmd_list_snapshot_full.bat, EXEC_CMD, EXEC_BAT, EXEC_PS1, EXEC_VBS
+        string jobfile = clientjob.StorageVault__JobFile__c; // cmd_list_snapshot_full.bat, EXEC_CMD, EXEC_BAT, EXEC_PS1, EXEC_VBS, EXEC_JS, EXEC_PY
         string jobname = clientjob.StorageVault__JobName__c.toLowerCase(); // run, LogMsgMother
         jobname = jobname ?? '';
         
@@ -1104,7 +1107,7 @@ global without sharing class PublicRestService {
             if ( String.isBlank(sessionts) )
                 sessionts = registerdt;// Datetime.now().format('yyyyMMddHHmmssSSS');
 
-            clientaccess.put('SessionDT',log.StorageVault__SessionTS__c);
+            clientaccess.put('SessionDT',log.StorageVault__SessionTS__c); // anchor
             clientaccess.put('Username',log.StorageVault__Username__c);
             clientaccess.put('TSOURCE',log.StorageVault__TSource__c);
             clientaccess.put('LastModifiedDate',log.LastModifiedDate.format('yyyy-MM-dd HH:mm:ss.SSS'));
