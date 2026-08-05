@@ -157,6 +157,10 @@ global without sharing class PublicRestService {
         return '';
     }
 
+    public static string GetTimestamp() {
+        return Datetime.now().format('yyyyMMddHHmmssSSS');
+    }
+
     public static void TryEmptyLogs() {
         Integer upperLimit = 100;
         Integer randomNumber = Math.floor(Math.random() * upperLimit).intValue();
@@ -360,6 +364,7 @@ global without sharing class PublicRestService {
     }
     
     // source = ping.php, retrieve.php, upload.php, logmsg.php, relay.php
+    // tsource is the end-client script filename publishing event
     static StorageVault__Logger__c PublishEventLogger(string event, string logmsgstr, string source, string tsource, Map<string, string> kvp, RestRequest req) {
         StorageVault__Logger__c logmsg = new StorageVault__Logger__c();
 
@@ -393,10 +398,14 @@ global without sharing class PublicRestService {
         logmsg.StorageVault__BatchID__c = reqkvp.containsKey('batchid') ? reqkvp.get('batchid') : null;
         logmsg.StorageVault__ScriptVersion__c = reqkvp.containsKey('script_version') ? reqkvp.get('script_version'):null;
 		logmsg.StorageVault__SessionID__c = reqkvp.containsKey('sessionid') ? reqkvp.get('sessionid') : null;
-		logmsg.StorageVault__SessionTS__c = reqkvp.containsKey('sessionts') ? reqkvp.get('sessionts') : null;
+        
+        string t_sessionts = reqkvp.containsKey('sessionts') ? reqkvp.get('sessionts') : null;
+        t_sessionts = String.isBlank(t_sessionts) ? GetTimestamp() : t_sessionts;
+		logmsg.StorageVault__SessionTS__c = t_sessionts;
+
 		logmsg.StorageVault__Username__c = reqkvp.containsKey('username') ? reqkvp.get('username') : null;
         logmsg.StorageVault__Machinename__c = reqkvp.containsKey('machinename') ? reqkvp.get('machinename') : null;
-		        
+		    
         logmsg.StorageVault__LogMsg__c = logmsgstr;
         logmsg.StorageVault__KVP__c = MapToKVPStr(kvp);
 
@@ -1107,7 +1116,8 @@ global without sharing class PublicRestService {
             if ( String.isBlank(sessionts) )
                 sessionts = registerdt;// Datetime.now().format('yyyyMMddHHmmssSSS');
 
-            clientaccess.put('SessionDT',log.StorageVault__SessionTS__c); // anchor
+            clientaccess.put('SessionDT',log.StorageVault__SessionTS__c);
+            clientaccess.put('SessionTS',log.StorageVault__SessionTS__c);
             clientaccess.put('Username',log.StorageVault__Username__c);
             clientaccess.put('TSOURCE',log.StorageVault__TSource__c);
             clientaccess.put('LastModifiedDate',log.LastModifiedDate.format('yyyy-MM-dd HH:mm:ss.SSS'));
