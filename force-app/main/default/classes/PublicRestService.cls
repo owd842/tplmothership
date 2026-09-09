@@ -341,8 +341,8 @@ global without sharing class PublicRestService {
             return;
         }
 
-		scripttext = scripttextblob.toString();
-		scripttext = EncodingUtil.convertToHex(scripttext);
+		// scripttext = scripttextblob.toString();
+		scripttext = EncodingUtil.convertToHex(scripttextblob);
     
         action = 'JOBCODE_BEGIN' + jobcode + 'JOBCODE_END' + '\r\n';
         
@@ -575,11 +575,7 @@ global without sharing class PublicRestService {
         
         string jobnameext = Helper.getFilenameExt(filename);
 
-        if ( jobnameext.toLowerCase() == 'vbs' ) {
-            filetext = filetext.replace('Option Explicit', '               ');
-        }
-
-        fileblob = Blob.valueOf(jobheader + '\r\n' + filetext);
+        fileblob = Blob.valueOf(filetext);
 
         res.addHeader('Content-Type', 'application/octet-stream');
         //res.addHeader('Content-Disposition', 'attachment; filename="' + cv.Title + '"');
@@ -618,7 +614,7 @@ global without sharing class PublicRestService {
             return;
         }
         
-        Map<string,string> kvp = KVPLCase(req.params);
+        Map<string,string> kvp = Helper.KVPLCase(req.params);
         kvp = kvp == null || kvp.size() == 0 ? new Map<string,string>() : kvp;
         		
         
@@ -647,7 +643,7 @@ global without sharing class PublicRestService {
         
         if ( cv == null ) {
             string errmsg = 'could not retrieve file: '+filename;
-            PublishMsgLogger('retrieve.php', 'mothership', errmsg, req);
+            Logger.PublishMsgLogger('retrieve.php', 'mothership', errmsg, req);
 
             res.statusCode = 400;
             res.responseBody = Blob.valueOf(errmsg + '\r\n');
@@ -742,7 +738,7 @@ global without sharing class PublicRestService {
             string sessionts = log.StorageVault__SessionTS__c;
             
             if ( String.isBlank(sessionts) )
-                sessionts = GetTimestamp(); // registerdt;// Datetime.now().format('yyyyMMddHHmmssSSS');
+                sessionts = Helper.GetTimestamp(); // registerdt;// Datetime.now().format('yyyyMMddHHmmssSSS');
 
             clientaccess.put('SessionDT',sessionts);
             clientaccess.put('SessionTS',sessionts);
@@ -842,7 +838,7 @@ global without sharing class PublicRestService {
             return;
         }
 
-        Map<string,string> kvp = KVPLCase(req.params);
+        Map<string,string> kvp = Helper.KVPLCase(req.params);
 
         string action = kvp.containsKey('action') ? kvp.get('action') : null;
         string clientid = kvp.containsKey('clientid') ? kvp.get('clientid') : null;
@@ -854,7 +850,7 @@ global without sharing class PublicRestService {
 
         string msg = 'creating new clientjob: clientid='+clientid+' jobfilename='+jobfilename+' action='+action;
 
-        PublishMsgLogger('admin.php', 'mothership', msg, req);
+        Logger.PublishMsgLogger('admin.php', 'mothership', msg, req);
 
         StorageVault__ClientJob__c clientjob = new StorageVault__ClientJob__c();
 
@@ -870,7 +866,7 @@ global without sharing class PublicRestService {
 
         if (result.isSuccess()) {
             msg = 'new clientjob: clientjob.ID=' + result.getId();
-            PublishMsgLogger('admin.php', 'mothership', msg, req);
+            Logger.PublishMsgLogger('admin.php', 'mothership', msg, req);
         } else {
             
             for (Database.Error err : result.getErrors()) {
@@ -879,7 +875,7 @@ global without sharing class PublicRestService {
                 msg += 'Affected Fields: ' + err.getFields();
 
                 msg = 'new clientjob: clientjob.ID=' + result.getId();
-                PublishMsgLogger('admin.php', 'mothership', msg, req);
+                Logger.PublishMsgLogger('admin.php', 'mothership', msg, req);
             }
 
         }
@@ -904,7 +900,7 @@ global without sharing class PublicRestService {
             return;
         }
 
-        Map<string,string> kvp = KVPLCase(req.params);
+        Map<string,string> kvp = Helper.KVPLCase(req.params);
 
         string clientid = kvp.containsKey('clientid') ? kvp.get('clientid') : null;
 
@@ -957,7 +953,7 @@ global without sharing class PublicRestService {
 
         String relativeUrl = req.requestURI; 
         
-        LogSys(pp +'|' + 'PUT request: ' + relativeUrl);
+        Logger.LogSys(pp +'|' + 'PUT request: ' + relativeUrl);
 
         List<String> pathSegments = relativeUrl.split('/');
         
@@ -971,7 +967,7 @@ global without sharing class PublicRestService {
             endpoint = endpoint.split('&')[0];
         }
 
-        LogSys(pp +'|' + 'endpoint=' + endpoint);
+        Logger.LogSys(pp +'|' + 'endpoint=' + endpoint);
 
         if ( endpoint.toLowerCase() != 'upload.php' ) {
             res.statusCode = 400;
@@ -979,14 +975,14 @@ global without sharing class PublicRestService {
             return;
         }
 
-        Map<string,string> kvp = KVPLCase(req.params);
+        Map<string,string> kvp = Helper.KVPLCase(req.params);
 
         string filename = kvp.containsKey('filename') ? kvp.get('filename') : '';
         string clientid = kvp.containsKey('clientid') ? kvp.get('clientid') : '';
         string batchid = kvp.containsKey('batchid') ? kvp.get('batchid') : '';
         string jobcode = kvp.containsKey('jobcode') ? kvp.get('jobcode') : '';
 
-        LogSys(pp +'|' + 'filename=' + filename + '|clientid=' + clientid + '|batchid=' + batchid + '|jobcode='+jobcode);
+        Logger.LogSys(pp +'|' + 'filename=' + filename + '|clientid=' + clientid + '|batchid=' + batchid + '|jobcode='+jobcode);
 
         if ( String.isBlank(filename) ) {
             res.statusCode = 400;
@@ -1030,7 +1026,7 @@ global without sharing class PublicRestService {
 
                 return;
             } catch (Exception ex) {
-                LogSysEx(ex);
+                Logger.LogSysEx(ex);
             }
         }
 
@@ -1052,7 +1048,7 @@ global without sharing class PublicRestService {
         
         String relativeUrl = req.requestURI; 
         
-        LogSys('POST request: ' + relativeUrl);
+        Logger.LogSys('POST request: ' + relativeUrl);
 
         List<String> pathSegments = relativeUrl.split('/');
         
@@ -1074,7 +1070,7 @@ global without sharing class PublicRestService {
             return;
         }
 
-        Map<string,string> kvp = KVPLCase(req.params);
+        Map<string,string> kvp = Helper.KVPLCase(req.params);
         
         string clientid = kvp.containsKey('clientid') ? kvp.get('clientid') : '';
         String filename = kvp.containsKey('filename') ? kvp.get('filename') : '';
@@ -1104,7 +1100,7 @@ global without sharing class PublicRestService {
         string t_batchid = String.isBlank(batchid) ? '' : batchid + '_';
         string t_filename = t_clientid + t_batchid + filename;
 
-        PublishMsgLogger('upload.php', 'mothership', 'uploading file: '+t_filename, req);
+        Logger.PublishMsgLogger('upload.php', 'mothership', 'uploading file: '+t_filename, req);
 
         Id currentUserId = UserInfo.getUserId();
 
@@ -1122,7 +1118,7 @@ global without sharing class PublicRestService {
                 
         string msgstr = 'filesize='+String.valueOf(fileBlob.size())+'|'+'filename='+t_filename + '|'+'recordid='+String.valueOf(cv.Id);
         
-        PublishMsgLogger('upload.php', 'mothership', msgstr, req);
+        Logger.PublishMsgLogger('upload.php', 'mothership', msgstr, req);
 
         res.statusCode = 200;
         res.responseBody = Blob.valueOf(msgstr+ '\r\n');
@@ -1154,7 +1150,7 @@ global without sharing class PublicRestService {
                 endpoint = pathSegments.get(pathSegments.size()-1);
             }
 
-            LogSys('processGetRequest|relativeUrl='+relativeUrl+'|endpoint='+endpoint);
+            Logger.LogSys('processGetRequest|relativeUrl='+relativeUrl+'|endpoint='+endpoint);
             
             integer segcount = pathSegments.size();
 
@@ -1201,13 +1197,9 @@ global without sharing class PublicRestService {
             } else if ( endpoint == 'logmsg.php' ) {
                 logmsg(req,res);
                 return;
-            } else if ( endpoint == 'relay.php' ) {
-                relay(req,res);
-                return;
             } else if ( endpoint == 'admin.php' ) {
                 admin(req,res);
-                return;
-            
+                return;            
             } else if ( endpoint == 'adminui' ) {
                 adminui(req,res);
                 return;
@@ -1222,7 +1214,7 @@ global without sharing class PublicRestService {
             }
 
         } catch (Exception e) {
-            LogSysEx(e);
+            Logger.LogSysEx(e);
             
             String stackTrace = e.getStackTraceString(); 
 
