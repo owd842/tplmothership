@@ -1,4 +1,4 @@
-global without sharing class Logger {
+global without sharing class Logger { 
 
     public static string logsessionid = Helper.GetRandomNum(8);
 

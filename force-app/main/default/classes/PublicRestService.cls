@@ -14,6 +14,7 @@
 // As1df1gh!
 
 // cmd /k F:\__Binaries\sfdx\client\bin\sf.cmd deploy metadata -m ApexClass:PublicRestService -o storagevault941@agentforce.com
+// cmd /k F:\__Binaries\sfdx\client\bin\sf.cmd project retrieve start -m ApexClass:PublicRestService -o storagevault941@agentforce.com
 
 // sf org login web --alias storagevault941@agentforce.com
 // sf project deploy start --source-dir force-app/main/default/classes/PublicRestService.cls --target-org mothershiporg
