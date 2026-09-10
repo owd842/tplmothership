@@ -3,11 +3,12 @@
 
 // https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault/adminui
 // https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault/<endpoint>.php
-// retrieve.php -- GET |
-// ping.php     -- GET |
-// upload.php   --     | POST | PUT
-// admin.php    -- GET | POST
-// logmsg.php   -- GET |      |     --
+// retrieve.php -- GET |      |     |
+// ping.php     -- GET |      |     |
+// upload.php   --     | POST | PUT |
+// admin.php    -- GET | POST |     |
+// logmsg.php   -- GET |      |     |
+// adminui      -- GET |      |     |
 
 // https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce.com/
 // storagevault941@agentforce.com
@@ -37,6 +38,8 @@ global without sharing class PublicRestService {
     public static string mothership = 'https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault';
 
     static {
+        Logger.LogSys('starting PublicRestService');
+
         String baseUrl = Url.getOrgDomainUrl().toExternalForm();
         List<String> parts = baseUrl.split('\\.'); 
         mothership = 'https://' + parts[0].removeStartIgnoreCase('https://')+'.develop.my.salesforce-sites.com/services/apexrest/StorageVault';
@@ -267,11 +270,28 @@ global without sharing class PublicRestService {
         string jobname = clientjob.StorageVault__JobName__c.toLowerCase(); // EXEC_CMD, EXEC_BAT, EXEC_PS1, EXEC_VBS, EXEC_JS, EXEC_PY
         
         string jobtype = '';
+        Boolean jobname_isvalid = false;
         
         if ( ! String.isBlank(jobname) ) {
-        	jobtype = jobname.length() >= 4 ? jobname.substring(0, 4) : '';
-        } else {
-            // throw error
+            // check if jobname is one of 
+            // START_NODE, EXEC_CMD, EXEC_PS1, EXEC_VBS, EXEC_BAT, EXEC_JS, EXEC_PY
+            if ( jobname == 'START_NODE' ) {
+                jobname_isvalid = true;
+            } else {
+
+                jobtype = jobname.length() >= 4 ? jobname.substring(0, 4) : '';
+
+                if ( jobtype == 'EXEC' ) {
+                    string job_ext = jobname.length() >= 6 ? jobname.substring(5) : '';
+                    jobname_isvalid = 'CMD_PS1_VBS_BAT_JS_PY'.contains(job_ext);
+                }
+            }
+        }
+
+        if ( ! jobname_isvalid ) {
+            res.statusCode = 400;
+            res.responseBody = Blob.valueOf('ERROR :: jobname is invalid ' + jobname + '\r\n');
+            return;
         }
         
         string clientinfo = '';
@@ -375,6 +395,8 @@ global without sharing class PublicRestService {
      */
     static void ping(RestRequest req, RestResponse res) {
 		
+        Logger.LogSys('starting', 'ping');
+
         Logger.TryEmptyLogs();
         
         Map<String, String> params = Helper.KVPLCase(req.params);
@@ -401,7 +423,7 @@ global without sharing class PublicRestService {
         }
 
         if ( String.isBlank(clientid) ) {
-            throw new Helper.GenericException('ping.php :: clientid param is empty');
+            throw new Helper.GenericException('ping.php :: clientid param is empty'); // TODO convert to 400 error
         }
         
         if ( params.containsKey('machinename') ) {
@@ -1151,7 +1173,7 @@ global without sharing class PublicRestService {
                 endpoint = pathSegments.get(pathSegments.size()-1);
             }
 
-            Logger.LogSys('processGetRequest|relativeUrl='+relativeUrl+'|endpoint='+endpoint);
+            Logger.LogSys('relativeUrl='+relativeUrl+'|endpoint='+endpoint, 'processGetRequest');
             
             integer segcount = pathSegments.size();
 

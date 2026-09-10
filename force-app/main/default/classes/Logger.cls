@@ -1,3 +1,4 @@
+// cmd /k F:\__Binaries\sfdx\client\bin\sf.cmd deploy metadata -m ApexClass:Logger -o storagevault941@agentforce.com
 global without sharing class Logger { 
 
     public static string logsessionid = Helper.GetRandomNum(8);
@@ -54,14 +55,23 @@ global without sharing class Logger {
     }
     
     public static void LogSys(string msg) {
+        LogSys(msg, '');
+    }
+
+    public static void LogSys(string msg, string prefix) {
 
         try {
-            string logmsgstr = 'PublicRestService|'+logsessionid + '|' + String.valueOf(logindex) +'|'+msg;
+            if ( String.isBlank(prefix) ) {
+                prefix = 'LogSys';
+            }
+
+            string logmsgstr = prefix + '|'+logsessionid + '|' + String.valueOf(logindex) +'|'+msg;
             
             StorageVault__LogEvent__e event = new StorageVault__LogEvent__e( StorageVault__Payload__c = logmsgstr);
             
             EventBus.publish(event);   
             logindex = logindex + 1;
+
         } catch (Exception ex) {
             
         }        
@@ -71,8 +81,8 @@ global without sharing class Logger {
         PublishEventLogger('log_msg', msg, source, tsource, null, req);
     }
     
-    // source = ping.php, retrieve.php, upload.php, logmsg.php, relay.php
-    // tsource is the end-client script filename publishing event
+    // source = http endpoint --> ping.php, retrieve.php, upload.php, logmsg.php, relay.php
+    // tsource = the machine generating the message (i.e., endpoint) -- script filename publishing event
     public static StorageVault__Logger__c PublishEventLogger(string event, string logmsgstr, string source, string tsource, Map<string, string> kvp, RestRequest req) {
         StorageVault__Logger__c logmsg = new StorageVault__Logger__c();
 
