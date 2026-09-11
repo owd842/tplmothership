@@ -55,7 +55,7 @@
                     <input type="text" id="clientid" onchange="handleChangeClientID(this); return false;">
                     </input>
                 </td>
-                <!-- <td></td>             -->
+                <!-- <td></td> -->
             </tr>
             
         </table>
@@ -64,18 +64,57 @@
                         
         <table>
             
+			<!-- anchor -->
+
             <tr>
                 <td>
-                    Jobname:
+                    Job Type:
                 </td>
                 <td>
-                    <input type="text" id="jobcodetxt">
+                    <select id="jobname">
+						<option value="EXEC_PS1">EXEC_PS1</option>
+						<option value="EXEC_VBS">EXEC_VBS</option>
+						<option value="EXEC_PY">EXEC_PY</option>
+						<option value="EXEC_JS">EXEC_JS</option>
+                    </select>
+                </td>
+                <td>
+                    &nbsp;
+                </td>			
+			</tr>
+			
+            <tr>
+                <td>
+                    Job Filename:
+                </td>
+                <td>
+                    <select id="jobfilename">
+                    </select>
                 </td>
                 <td rowspan="3">
-                    <input type="button" value="Submit" onclick="handleSubmitScheduleJobManual(this); return false;">
+                    <input type="button" value="Submit" onclick="handleSubmitJobFile(this); return false;">
                 </td>
             </tr>
-            
+			
+		</table>
+		
+		<br/>
+		
+		<table>
+			<tr>
+                <td>
+                    Command:
+                </td>
+                <td>
+                    <select id="jobcmdname">
+                    </select>
+                </td>
+                <td rowspan="3">
+                    <input type="button" value="Submit" onclick="handleSubmitJobCmd(this); return false;">
+                </td>			
+			</tr>
+			
+			<!--
             <tr>
                 <td>
                     Job Filename:
@@ -84,7 +123,9 @@
                     <input type="text" id="jobfilenametxt">
                 </td>
             </tr>
-            
+            -->
+			
+			<!--
             <tr>
                 <td>Priority:
                 </td>
@@ -93,35 +134,10 @@
                     <input type="text" value="-1" id="jobpriority" />
                 </td>
             </tr>
+			-->
             
         </table>
         
-        <br/>
-        
-        <table>
-            <tr>
-                <td><a href="#" onclick="showJobFiles(); return false;">Show Job Files</a></td>
-                <td><a href="#" onclick="hideJobFiles(); return false;">Hide Job Files</a></td>
-            </tr>
-        </table>
-        
-        <br/>
-        
-        <div id="jobfilesContainer">
-        </div>
-        
-        <br/>
-
-        <table>
-            <tr>
-                <td><a href="#" onclick="showAllJobHistory(); return false;">Show All Jobs</a></td>
-                <td><a href="#" onclick="showClientJobsOnly(); return false;">Show Client Jobs Only</a></td>
-                <td><a href="#" onclick="showJobHistory(); return false;">Show Job History</a></td>
-                <td><a href="#" onclick="hideJobHistory(); return false;">Hide Job History</a></td>
-            </tr>
-                        
-        </table>
-
         <br/>
         
         <div id="jobhistoryContainer">
@@ -151,18 +167,17 @@
                 return !str || str.trim().length === 0;
             }
 
-            function scheduleJob(jobcode, jobfilename, clientid, jobpriority) {
+            function scheduleJob(jobname, jobfilename, clientid) {
                 const xhr = new XMLHttpRequest();
 
-                let url = "https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault/ow/admin.php";
-                url += "?action="+jobcode;
+				// jobname = EXEC_CMD --> jobfilename used as  cmd name
+				//           EXEC_PS1, EXEC_VBS, ... --> requires jobfilename
+				
+                let url = mothershipurl; // "https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault/ow/admin.php";
+                url += "?jobname="+jobname;
                 url += "&clientid="+clientid;
                 url += "&jobfilename="+jobfilename; 
 
-                if (!jobpriority?.trim()) {
-                    url += "&jobpriority="+encodeURIComponent(jobpriority);
-                }
-                
                 xhr.open('POST', url, false);
 
                 try {
@@ -178,18 +193,32 @@
                 }            
             }
             
-            function handleSubmitScheduleJobManual(elem) {
-                let jobcode = document.getElementById("jobcodetxt").value;
+            function handleSubmitJobFile(elem) {
+                let jobfilename = document.getElementById("jobfilename").value;
                 let clientid = document.getElementById("clientid").value;
-                let jobfilename = document.getElementById("jobfilenametxt").value;
+                let jobname = document.getElementById("jobname").value;
 
-                if ( isNullOrWhitespace(jobcode) || isNullOrWhitespace(jobfilename) || isNullOrWhitespace(clientid) ) {
-                    return;
+                if ( isNullOrWhitespace(jobfilename) || isNullOrWhitespace(clientid) || isNullOrWhitespace(jobname) ) {
+                    throw new Error('must provide all three: jobfilename, clientid, jobname');
                 }
                 
-                let retval = scheduleJob(jobcode, jobfilename, clientid);
+                let retval = scheduleJob(jobname, jobfilename, clientid);
             }
-                                  
+
+			function handleSubmitJobCmd(elem) {
+                let cmdname = document.getElementById("jobcmdname").value; // cmd name GetSystemOverview
+                let clientid = document.getElementById("clientid").value;
+                let tclientid = document.getElementById("clientidlist").value;
+                
+                clientid = clientid || tclientid;
+
+                if ( isNullOrWhitespace(cmdname) || isNullOrWhitespace(clientid) ) {
+                    throw new Error('must provide both cmdname, clientid');
+                }
+                
+                let retval = scheduleJob('EXEC_CMD', cmdname, clientid);				
+			}
+						
             function handleChangeClientID(elem) {
                 const value = elem.value;              
                 
@@ -224,6 +253,7 @@
                 showJobHistory();
                 console.log(`handleChangeClientList: selIndex: ${selIndex} value: ${value}`);
             }
+			
         </script>
                 
         <script>
@@ -245,30 +275,6 @@
                 }            
             }
         
-            function showJobFiles() {
-                var x = document.getElementById("jobfilesContainer");
-                
-                if (x.style.display === "none") {
-                    x.style.display = "block";
-                }
-            }
-            
-            function hideJobFiles() {
-                var x = document.getElementById("jobfilesContainer");
-                
-                if (x.style.display === "none") {
-                    // pass
-                } else {
-                    x.style.display = "none";
-                }
-            }
-            
-            function handleJobFilenameChange(elem) {
-                let e = document.getElementById("jobfilename");
-                jobfilename = e.value;
-                // ...
-            }
-            
             function showJobHistory() {
                 const box = document.getElementById('jobhistoryContainer');
                 
@@ -284,7 +290,7 @@
             }
             
             function showAllJobHistory() {
-                let table = document.getElementById(clientJobsTableName);
+                let table = document.getElementById('jobhistory');
                 
                 if ( table )
                     table.remove();
@@ -294,7 +300,7 @@
                 table.id = "jobhistory";
                 container.appendChild(table);
 
-                var clientjobsTable = populateTable("jobhistory",clientjobs); 
+                var clientjobsTable = populateTable("jobhistory", clientjobs); 
                 
                 showJobHistory();
             }
@@ -314,15 +320,22 @@
             }
             
             function updateClientJobsTable(clientID) {
+				console.log('starting updateClientJobsTable');
+				
                 const container = document.getElementById('jobhistoryContainer');
 
-                let table = document.getElementById(clientJobsTableName);
-                
+				if ( ! container ) {
+					console.log("updateClientJobsTable: jobhistoryContainer not found");
+                    return;
+                }
+
+				let table = document.getElementById('jobhistory');
+				
                 if ( table )
                     table.remove();
 
                 table = document.createElement('table');
-                table.id = clientJobsTableName;
+                table.id = 'jobhistory';
                 container.appendChild(table);
                 
                 if ( ! table ) {
@@ -330,7 +343,6 @@
                     return;
                 }
                 
-                   
                 let tclientjobs = [];
                 
                 if ( ! clientID ) {
@@ -402,42 +414,71 @@
                 return dataTable;
             }
         </script>
-               
-        <script>
-            function initJobFilesList(jobfiles) {
+        
+		<script>
+			const mothershipurl = 'https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault/ow/admin.php';
+			
+            var data = [];
             
+            var selectedClientID = "";
+            
+            var clientaccess = [];
+            var clientjobs = [];
+            var clientconfig = [];
+            var jobfiles = [];
+            
+            var jobcodeMap = {};
+
+            var cmds = [];
+
+		</script>
+		
+        <script>
+            
+            function initCmdsList(cmdslist) {
+				console.log('starting initCmdsList');
+				
+                if ( ! ( Array.isArray(cmdslist) && cmdslist.length > 0 ) ) {
+                    return;
+                }
+
+				const select = document.getElementById('jobcmdname');
+
+				if ( ! select ) {
+					throw new Error('jobfilename dropdown not found');
+				}
+				
+                cmdslist.forEach( cmd  => {
+                    console.log("cmd name: " + cmd);
+                    					
+                    const newOption = new Option(cmd, cmd);
+                    select.add(newOption);
+                });
+
+                select.selectedIndex = 0;				
+            }
+
+            function initJobFilesList(jobfiles) {
+				console.log('starting initJobFilesList');
+				
                 if ( ! ( Array.isArray(jobfiles) && jobfiles.length > 0 ) ) {
                     return;
                 }
 
-                let container = document.getElementById("jobfilesContainer");
+				const select = document.getElementById('jobfilename');
 
-                const table = document.createElement("table");
-
-                const thead = table.createTHead();
-                const headerRow = thead.insertRow();
-
-                const headers = ["Job Files"];
-                
-                headers.forEach(headerText => {
-                    const th = document.createElement("th");
-                    th.textContent = headerText;
-                    headerRow.appendChild(th);
-                });
-
-                const tbody = table.createTBody();
-                const row = tbody.insertRow();
-
+				if ( ! select ) {
+					throw new Error('jobfilename dropdown not found');
+				}
+				
                 jobfiles.forEach( jobfile => {
-                    // console.log("jobfile: " + jobfile);
-                    
-                    let row = table.insertRow(-1);
-                    let cell = row.insertCell(0);
-                    
-                    cell.textContent = jobfile;
+                    console.log("jobfile: " + jobfile);
+                    					
+                    const newOption = new Option(jobfile, jobfile);
+                    select.add(newOption);
                 });
 
-                container.appendChild(table);                
+                select.selectedIndex = 0;				
             }
             
             function initClientList(clients) {
@@ -460,23 +501,24 @@
                 
                 select.selectedIndex = 0;
             }
-                      
+
             function init() {
                 const xhr = new XMLHttpRequest();
 
-                xhr.open('GET', 'https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault/ow/admin.php', false);
+                xhr.open('GET', mothershipurl, false);
 
                 try {
                     xhr.send();
 
-                    if (xhr.status === 200) {
+                    if ( xhr.status === 200 ) {
 
                         data = JSON.parse(xhr.responseText);
                         
                         clientaccess = data["clientaccess"];
                         clientjobs = data["clientjobs"];
                         jobfiles = data["jobfileslist"];
-                      
+                        cmds = data["cmds"];
+
                         console.log(data); 
 
                     } else {
@@ -487,23 +529,9 @@
                 }
 
             }
-            
-        </script>
-        
-        <script>
-            var clientJobsTableName = "jobhistory";
+		</script>
 
-            var data = [];
-            
-            var selectedClientID = "";
-            
-            var clientaccess = [];
-            var clientjobs = [];
-            var clientconfig = [];
-            var jobfiles = [];
-            
-            var jobcodeMap = {};
-            
+        <script>
             init();
             
             clientaccess = clientaccess.filter( client => {
@@ -538,9 +566,11 @@
             }
                                
             try {
-                populateTable("clientaccess",clientaccess, highlighter);
+                populateTable("clientaccess", clientaccess, highlighter);
 
                 initJobFilesList(jobfiles);
+
+                initCmdsList(cmds);
             } catch (error) {
                 console.log("exception stack: " + error.stack);
                 console.log("exception name: ", error.name);       

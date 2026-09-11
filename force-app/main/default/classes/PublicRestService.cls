@@ -14,8 +14,10 @@
 // storagevault941@agentforce.com
 // As1df1gh!
 
+// cmd /k F:\__Binaries\sfdx\client\bin\sf.cmd org login web --alias storagevault941@agentforce.com
 // cmd /k F:\__Binaries\sfdx\client\bin\sf.cmd deploy metadata -m ApexClass:PublicRestService -o storagevault941@agentforce.com
 // cmd /k F:\__Binaries\sfdx\client\bin\sf.cmd project retrieve start -m ApexClass:PublicRestService -o storagevault941@agentforce.com
+// cmd /k F:\__Binaries\sfdx\client\bin\sf.cmd apex generate class --name FileHelper --output-dir force-app/main/default/classes
 
 // sf org login web --alias storagevault941@agentforce.com
 // sf project deploy start --source-dir force-app/main/default/classes/PublicRestService.cls --target-org mothershiporg
@@ -45,6 +47,20 @@ global without sharing class PublicRestService {
         mothership = 'https://' + parts[0].removeStartIgnoreCase('https://')+'.develop.my.salesforce-sites.com/services/apexrest/StorageVault';
     }   
     
+    public static string getEndpoint(RestRequest req) {
+        String relativeUrl = req.requestURI; 
+        
+        List<String> pathSegments = relativeUrl.split('/');
+        
+        String endpoint = '';
+        
+        if ( ! pathSegments.isEmpty() ) {
+            endpoint = pathSegments.get(pathSegments.size()-1);
+        }
+
+        return endpoint;
+    }
+
     public class MothershipConfig {
         List<string> tplmotherships = new List<string>();
         string bunnyheader = '';
@@ -126,7 +142,7 @@ global without sharing class PublicRestService {
                     String responseBody = response.getBody();
                     
                     try {
-                        CreateContentVersion('config.txt',Blob.valueOf(responseBody));
+                        FileHelper.CreateContentVersion('config.txt',Blob.valueOf(responseBody));
                     } catch (Exception ex) {
 
                     }
@@ -143,63 +159,7 @@ global without sharing class PublicRestService {
 
         return '';
     }
-    
-    public static ContentVersion GetContentVersion(string filename) {
-    	ContentVersion cv = null;
-        
-        List<ContentVersion> cvs = [ SELECT VersionData, Title, PathOnClient, FileExtension 
-                                     FROM ContentVersion 
-                                     WHERE Title = :filename //AND PathOnClient = '/'+filename 
-                                     ORDER BY LastModifiedDate DESC
-                                     LIMIT 1 ];
 
-        if ( ! cvs.isEmpty() )
-            cv = cvs[0];
-            
-        return cv;
-    }
-
-    public static ContentVersion CreateContentVersion(string filename, blob fileBlob) {
-    	ContentVersion cv = null;
-        
-        List<ContentVersion> existingFiles = [ SELECT ContentDocumentId FROM ContentVersion WHERE Title = :filename AND IsLatest = true LIMIT 1 ];
-
-        cv = new ContentVersion();
-
-        Id currentUserId = UserInfo.getUserId();
-
-        cv.Title = filename;
-        cv.PathOnClient = '/' + filename; 
-        cv.VersionData = fileBlob;
-        cv.IsMajorVersion = true;
-        // cv.ContentLocation = 'C'; // 'C' indicates it's stored in Salesforce
-        cv.IsMajorVersion = true;
-        cv.SharingPrivacy = 'N'; 
-        cv.FirstPublishLocationId = currentUserId; // Automatically links the file to the user
-
-        if ( ! existingFiles.isEmpty() ) {
-            cv.ContentDocumentId = existingFiles[0].ContentDocumentId;
-        }
-        
-        Database.SaveResult sr = Database.insert(cv, false);
-
-        if (sr.isSuccess()) {
-            // System.debug('Successfully inserted Account. ID: ' + sr.getId());
-        } else {
-            /*
-            // Operation failed, loop through the errors
-            for(Database.Error err : sr.getErrors()) {
-                System.debug('Error status code: ' + err.getStatusCode());
-                System.debug('Error message: ' + err.getMessage());
-                System.debug('Fields that affected this error: ' + err.getFields());
-            }
-                */
-        }
-                        
-        // string msgstr = 'filesize='+String.valueOf(fileBlob.size())+'|'+'filename='+t_filename + '|'+'recordid='+String.valueOf(cv.Id);
-
-        return cv;
-    }
 
     static Map<string,string> GetRequestProfile() {
         Map<string,string> out = new Map<string,string>();
@@ -346,7 +306,7 @@ global without sharing class PublicRestService {
         } 
         
         string scripttext = '';
-        ContentVersion cv = GetContentVersion(jobfile);
+        ContentVersion cv = FileHelper.GetContentVersion(jobfile);
 
         if ( cv == null ) {
             res.statusCode = 400;
@@ -576,7 +536,7 @@ global without sharing class PublicRestService {
         
         Logger.LogSys('execCmdList|clientjob='+clientjob.ID+'|filename='+filename);
 
-        ContentVersion cv = GetContentVersion(filename);
+        ContentVersion cv = FileHelper.GetContentVersion(filename);
         
         if ( cv == null ) {                            
             string errmsg = 'execCmdList: could not retrieve file: '+filename;
@@ -662,7 +622,7 @@ global without sharing class PublicRestService {
             return;
         } 
 
-        ContentVersion cv = GetContentVersion(filename);
+        ContentVersion cv = FileHelper.GetContentVersion(filename);
         
         if ( cv == null ) {
             string errmsg = 'could not retrieve file: '+filename;
@@ -816,25 +776,6 @@ global without sharing class PublicRestService {
         return jobslist;
     }
 
-    public static List<string> GetFilesList() {
-        List<string> files = new List<string>();
-
-        List<AggregateResult> results = [
-            SELECT Title, MAX(LastModifiedDate) latestModDate
-            FROM ContentVersion
-            WHERE IsLatest = true 
-            GROUP BY Title
-            ORDER BY MAX(LastModifiedDate) DESC
-        ];
-        
-        for (AggregateResult ar : results) {
-            String fileTitle = (String) ar.get('Title');
-            files.add(fileTitle);
-        }
-
-        return files;
-    }
-
     // admin.php -- POST requests
     public static void adminpost(RestRequest req, RestResponse res) {
         String relativeUrl = req.requestURI; 
@@ -907,16 +848,9 @@ global without sharing class PublicRestService {
     }
 
     // admin.php -- GET requests
-    public static void admin(RestRequest req, RestResponse res) {
-        String relativeUrl = req.requestURI; 
-        
-        List<String> pathSegments = relativeUrl.split('/');
-        
-        String endpoint = '';
-        
-        if ( ! pathSegments.isEmpty() ) {
-            endpoint = pathSegments.get(pathSegments.size()-1);
-        }
+    // TODO transmit list of supported cmds
+    public static void admin(RestRequest req, RestResponse res) {       
+        String endpoint = getEndpoint(req);
         
         if ( endpoint != 'admin.php' ) {
 			res.statusCode = 500;
@@ -935,15 +869,19 @@ global without sharing class PublicRestService {
 
         List<Map<string,string>> clientjobs = GetClientJobs();
 
-        List<string> files = GetFilesList();
+        List<string> files = FileHelper.GetFilesList();
+
+        List<string> cmds = new List<String>{'GetSystemOverview', 'Relay', 'StreamScreen', 'Config', 'Cleanup', 'SelfDestruct' };
 
         string json_clients = JSON.serialize(clients);
         string json_clientjobs = JSON.serialize(clientjobs);
         string json_files = JSON.serialize(files);
+        string json_cmds = JSON.serialize(cmds);
 
         string finalstr = '{ "clientaccess": '+json_clients+', ';
         finalstr += ' "clientjobs": ' + json_clientjobs + ', ';
-        finalstr += ' "jobfileslist": ' + json_files + ' }';
+        finalstr += ' "jobfileslist": ' + json_files + ', ';
+        finalstr += ' "cmds": ' + json_cmds + ' }';
 
         res.responseBody = Blob.valueOf(finalstr);
         return;
@@ -951,7 +889,7 @@ global without sharing class PublicRestService {
 
     // admin.html
     public static void adminui(RestRequest req, RestResponse res) {
-        ContentVersion cv = GetContentVersion('admin.html');
+        ContentVersion cv = FileHelper.GetContentVersion('admin.html');
 
         if ( cv == null ) {
             res.statusCode = 400;
@@ -1184,7 +1122,7 @@ global without sharing class PublicRestService {
                 if ( pathdir.toLowerCase() == 'assets' ) {
                     // logmsg --> retrieving filename etc.
 
-                    ContentVersion cv = GetContentVersion(fname);
+                    ContentVersion cv = FileHelper.GetContentVersion(fname);
 
                     if ( cv != null ) {
                         Blob fileBlob = cv.VersionData;
