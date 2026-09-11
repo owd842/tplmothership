@@ -196,9 +196,13 @@ global without sharing class PublicRestService {
     //                                                                                                      JOBCODE_BEGIN ... JOBCODE_END
     static void processClientJob(RestRequest req, RestResponse res, string clientid, string clientstatus, Map<String, String> params) {
 
+        Logger.LogSys('starting', 'processClientJob');
+
         if ( params == null || params.isEmpty() ) {
             params = new Map<String, String>();
         }
+
+        Logger.LogSys('searching for jobs with clientid='+clientid, 'processClientJob');
 
         List<StorageVault__ClientJob__c> jobs = [ SELECT ID, Name, StorageVault__JobCode__c, 
                                                  	StorageVault__JobName__c,
@@ -210,7 +214,8 @@ global without sharing class PublicRestService {
                                                  LIMIT 1 ];
         
         if ( jobs.isEmpty() ) {
-            
+            Logger.LogSys('jobs is empty', 'processClientJob');
+
             string source = params.containsKey('source') ? params.get('source') : 'mothership';
 
             Logger.PublishMsgLogger('ping.php', source, clientstatus, req);
@@ -221,6 +226,7 @@ global without sharing class PublicRestService {
             res.responseBody = Blob.valueOf(clientstatus + '\r\n' + msgout);
             return;
         }
+        Logger.LogSys('found '+jobs.size() + ' jobs', 'processClientJob');
 
 		StorageVault__ClientJob__c clientjob = jobs[0];
         
@@ -450,7 +456,9 @@ global without sharing class PublicRestService {
             }
 
         }       
-            
+
+        string kvpstr = Helper.MapToKVPStr(params);
+
         // CLIENT_EXISTS
         // CLIENT_EXISTS_NEW_PROFILE
         // NEW_CLIENT
@@ -462,6 +470,8 @@ global without sharing class PublicRestService {
         } else if ( isNewProfile ) {
             clientstatus = 'CLIENT_EXISTS_NEW_PROFILE';
         }
+
+        Logger.LogSys('client state: ' + clientstatus + ' -- ' + kvpstr, 'ping');
 
 		processClientJob(req, res, clientid, clientstatus, params);
         
@@ -778,16 +788,8 @@ global without sharing class PublicRestService {
 
     // admin.php -- POST requests
     public static void adminpost(RestRequest req, RestResponse res) {
-        String relativeUrl = req.requestURI; 
-        
-        List<String> pathSegments = relativeUrl.split('/');
-        
-        String endpoint = '';
-        
-        if ( ! pathSegments.isEmpty() ) {
-            endpoint = pathSegments.get(pathSegments.size()-1);
-        }
-        
+        string endpoint = getEndpoint(req);
+
         if ( endpoint != 'admin.php' ) {
 			res.statusCode = 500;
             res.responseBody = Blob.valueOf('endpoint not admin.php');        
@@ -804,15 +806,13 @@ global without sharing class PublicRestService {
 
         Map<string,string> kvp = Helper.KVPLCase(req.params);
 
-        string action = kvp.containsKey('action') ? kvp.get('action') : null;
+        string jobname = kvp.containsKey('jobname') ? kvp.get('jobname') : null;
         string clientid = kvp.containsKey('clientid') ? kvp.get('clientid') : null;
         string jobfilename = kvp.containsKey('jobfilename') ? kvp.get('jobfilename') : null;
-        string jobpriority = kvp.containsKey('jobpriority') ? kvp.get('jobpriority') : null; // JobIndex
 
-        if ( jobpriority == 'undefined' )
-            jobpriority = '-1';
+        string jobpriority = '-1';
 
-        string msg = 'creating new clientjob: clientid='+clientid+' jobfilename='+jobfilename+' action='+action;
+        string msg = 'creating new clientjob: clientid='+clientid+' jobfilename='+jobfilename+' jobname='+jobname;
 
         Logger.PublishMsgLogger('admin.php', 'mothership', msg, req);
 
@@ -821,7 +821,7 @@ global without sharing class PublicRestService {
         clientjob.StorageVault__ClientID__c = clientid;
         clientjob.StorageVault__CreateTS__c = Datetime.now().format('yyyyMMddHHmmssSSS');
         clientjob.StorageVault__JobFile__c = jobfilename;
-        clientjob.StorageVault__JobName__c = action;
+        clientjob.StorageVault__JobName__c = jobname;
         clientjob.StorageVault__JobIndex__c = String.isBlank(jobpriority) ? '-1' : jobpriority;
 
         // insert clientjob;

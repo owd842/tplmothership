@@ -17,7 +17,7 @@
 
             input {
               field-sizing: content;
-              min-width: 50px; /* Optional: keeps it from disappearing when empty */
+              min-width: 150px; /* Optional: keeps it from disappearing when empty */
             }
 
             .highlight-active {
@@ -64,8 +64,6 @@
                         
         <table>
             
-			<!-- anchor -->
-
             <tr>
                 <td>
                     Job Type:
@@ -109,11 +107,26 @@
                     <select id="jobcmdname">
                     </select>
                 </td>
-                <td rowspan="3">
-                    <input type="button" value="Submit" onclick="handleSubmitJobCmd(this); return false;">
-                </td>			
+                <td>&nbsp;</td>			
 			</tr>
-			
+            <tr>
+                <td colspan="3"><input type="text" id="jobcmd_arg1" size="30" minlength="50"/></td>
+            </tr><br/>
+            <tr>
+                <td colspan="3"><input type="text" id="jobcmd_arg2" size="30" minlength="50"/></td>
+            </tr><br/>
+            <tr>
+                <td colspan="3"><input type="text" id="jobcmd_arg3" size="30" minlength="50"/></td>
+            </tr><br/>
+            <tr>
+                <td colspan="3"><input type="text" id="jobcmd_arg4" name="jobcmd_arg4" size="30" minlength="50"/></td>
+            </tr><br/>
+
+            <tr>
+                <td colspan="3">
+                    <input type="button" value="Submit" onclick="handleSubmitJobCmd(this); return false;">
+                </td>
+            </tr>
 			<!--
             <tr>
                 <td>
@@ -210,13 +223,27 @@
                 let clientid = document.getElementById("clientid").value;
                 let tclientid = document.getElementById("clientidlist").value;
                 
+                let targs = [
+                    document.getElementById("jobcmd_arg1").value,
+                    document.getElementById("jobcmd_arg2").value,
+                    document.getElementById("jobcmd_arg3").value,
+                    document.getElementById("jobcmd_arg4").value,
+                ];
+
+                targs = targs.filter((element, index, array) => {
+                    return ! isNullOrWhitespace(element);
+                });
+
+                  
                 clientid = clientid || tclientid;
 
                 if ( isNullOrWhitespace(cmdname) || isNullOrWhitespace(clientid) ) {
                     throw new Error('must provide both cmdname, clientid');
                 }
                 
-                let retval = scheduleJob('EXEC_CMD', cmdname, clientid);				
+                targs = targs.length > 0 ? '|' + targs.join('|') : '';
+
+                let retval = scheduleJob('EXEC_CMD', cmdname+targs, clientid);				
 			}
 						
             function handleChangeClientID(elem) {
