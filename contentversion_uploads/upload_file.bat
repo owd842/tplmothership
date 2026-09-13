@@ -21,8 +21,9 @@ REM set mothership=https://orgfarm-8e7ef9e5a3-dev-ed.develop.my.salesforce-sites
 type nul > curl.log
 type nul > upload_list.txt
 
-echo admin.html >> upload_list.txt
+echo client_pubnub.html >> upload_list.txt
 
+REM echo admin.html >> upload_list.txt
 REM echo test_python_script.py >> upload_list.txt
 REM echo cmd_list_test.bat >> upload_list.txt
 REM echo cmd_list_snapshot_full.bat >> upload_list.txt

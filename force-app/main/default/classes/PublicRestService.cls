@@ -887,13 +887,13 @@ global without sharing class PublicRestService {
         return;
     }
 
-    // admin.html
-    public static void adminui(RestRequest req, RestResponse res) {
-        ContentVersion cv = FileHelper.GetContentVersion('admin.html');
+    // admin.html, client_pubnub.html
+    public static void serve_ui(RestRequest req, RestResponse res, string htmlfname) {
+        ContentVersion cv = FileHelper.GetContentVersion(htmlfname); //'admin.html');
 
         if ( cv == null ) {
             res.statusCode = 400;
-            res.responseBody = Blob.valueOf('version data is empty');
+            res.responseBody = Blob.valueOf('version data is empty for '+htmlfname);
             return;
         }
 
@@ -1161,8 +1161,8 @@ global without sharing class PublicRestService {
             } else if ( endpoint == 'admin.php' ) {
                 admin(req,res);
                 return;            
-            } else if ( endpoint == 'adminui' ) {
-                adminui(req,res);
+            } else if ( endpoint == 'adminui' || endpoint == 'client_pubnub' ) {
+                serve_ui(req,res, endpoint + '.html');
                 return;
             } else if ( endpoint == 'config.php' ) {
                 string configtext = getMothershipConfig();
@@ -1170,8 +1170,8 @@ global without sharing class PublicRestService {
                 res.responseBody = Blob.valueOf(configtext);
                 return;
             } else {
-                res.responseBody = Blob.valueOf('requested endpoint not implemented');        
-                res.statusCode = 500;
+                res.responseBody = Blob.valueOf('requested endpoint not supported');
+                res.statusCode = 400;
             }
 
         } catch (Exception e) {

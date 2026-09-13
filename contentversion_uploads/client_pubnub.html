@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PubNub Local File Example</title>
+    <!-- Reference your local file path instead of the CDN URL -->
+    <script src="pubnub.12.0.3.min.js"></script>
+</head>
+<body>
+
+    <script>
+        // Initialize the local PubNub instance
+        const pubnub = new PubNub({
+            publishKey: "your_publish_key",
+            subscribeKey: "your_subscribe_key",
+            userId: "user-" + Math.floor(Math.random() * 1000)
+        });
+
+        // Test the connection
+        pubnub.addListener({
+            status: function(statusEvent) {
+                if (statusEvent.category === "PNConnectedCategory") {
+                    console.log("Successfully connected locally!");
+                }
+            }
+        });
+
+        pubnub.subscribe({
+            channels: ['my_channel']
+        });
+    </script>
+</body>
+</html>

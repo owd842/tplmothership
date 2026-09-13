@@ -1,1 +1,1 @@
-admin.html 
+client_pubnub.html 
