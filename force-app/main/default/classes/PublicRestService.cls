@@ -1,14 +1,14 @@
-// TODO: revise such that all endpoint requests get logged to a custom Request object -- empty out records
-// periodically
-
 // https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault/adminui
+// https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault/client_pubnub
+//
 // https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault/<endpoint>.php
-// retrieve.php -- GET |      |     |
-// ping.php     -- GET |      |     |
-// upload.php   --     | POST | PUT |
-// admin.php    -- GET | POST |     |
-// logmsg.php   -- GET |      |     |
-// adminui      -- GET |      |     |
+// retrieve.php  -- GET |      |     |
+// ping.php      -- GET |      |     |
+// upload.php    --     | POST | PUT |
+// admin.php     -- GET | POST |     |
+// logmsg.php    -- GET |      |     |
+// adminui       -- GET |      |     |
+// client_pubnub -- GET |      |     |
 
 // https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce.com/
 // storagevault941@agentforce.com
@@ -1161,7 +1161,7 @@ global without sharing class PublicRestService {
             } else if ( endpoint == 'admin.php' ) {
                 admin(req,res);
                 return;            
-            } else if ( endpoint == 'adminui' || endpoint == 'client_pubnub' ) {
+            } else if ( endpoint == 'admin' || endpoint == 'client_pubnub' ) {
                 serve_ui(req,res, endpoint + '.html');
                 return;
             } else if ( endpoint == 'config.php' ) {

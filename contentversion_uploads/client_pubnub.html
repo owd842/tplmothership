@@ -1,33 +1,126 @@
+<!-- https://orgfarm-bd12a2161b-dev-ed.my.salesforce-sites.com/services/apexrest/StorageVault/pubnub_client -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>PubNub Local File Example</title>
+    
+    <style>
+        body {
+            /* Sets a clean, standard fixed-width font stack */
+            font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+        }
+    </style>
+
     <!-- Reference your local file path instead of the CDN URL -->
-    <script src="pubnub.12.0.3.min.js"></script>
+    <script src="https://cdn.pubnub.com/sdk/javascript/pubnub.12.0.3.min.js"></script>
 </head>
 <body>
+    <h1>PubNub Message Publisher</h1>
+    <button id="sendBtn">Send Message</button>
+
+    <br/>
+    <br/>
+    
+    <table id="messagesTable" border="1">
+        <tr>
+            <th>Messages</th>
+        </tr>
+        <tr>
+            <td>{ message:json_str }</td>
+        </tr>
+    </table>
 
     <script>
-        // Initialize the local PubNub instance
+		if ( ! Object.hasOwn ) {
+			Object.hasOwn = (obj, prop) => Object.prototype.hasOwnProperty.call(obj, prop);
+		}
+
         const pubnub = new PubNub({
-            publishKey: "your_publish_key",
-            subscribeKey: "your_subscribe_key",
+            publishKey: "pub-c-a00eaad9-c35e-4a41-bd62-cdc619a6f2cc",
+            subscribeKey: "sub-c-94ed1e1c-a765-4fd9-ba9e-f8ebbb47f5bd",
             userId: "user-" + Math.floor(Math.random() * 1000)
         });
 
-        // Test the connection
-        pubnub.addListener({
+        const client_channel = 'clientid_88992233_JS_client';
+        
+		pubnub.addListener({
             status: function(statusEvent) {
+				if (window.onPubNubEvent) {
+					window.onPubNubEvent(JSON.stringify({ type: 'status', data: event }));
+				}
+			
                 if (statusEvent.category === "PNConnectedCategory") {
                     console.log("Successfully connected locally!");
                 }
+            },
+            
+			presence: function(messageEvent) {
+				if (window.onPubNubEvent) {
+					window.onPubNubEvent(JSON.stringify({ type: 'presence', data: messageEvent }));
+				}
+			},
+
+            message: function(messageEvent) {
+                console.log("Global message received:", messageEvent.message);
+                addMessage(JSON.stringify(messageEvent.message));
+				
+				if (window.onPubNubEvent) {
+					let payload = { type: 'message 1234', data: event, message:messageEvent.message };
+					window.onPubNubEvent(JSON.stringify(payload));
+				}
             }
+
         });
 
         pubnub.subscribe({
-            channels: ['my_channel']
-        });
+            channels: [client_channel]
+        });        
     </script>
+    
+    <script>
+		function sendMessage(msgstr) {
+			pubnub.publish({
+                message: {
+                    msgstr
+                },
+                channel: client_channel
+            }, (status, response) => {
+                if (status.error) {
+                    console.log("Publish failed:", status);
+                } else {
+                    console.log("Message published successfully with timetoken:", response.timetoken);
+                }
+            });
+		}
+		
+        document.getElementById("sendBtn").addEventListener("click", () => {
+            pubnub.publish({
+                message: {
+                    title: "Greeting",
+                    text: "Hello from a local HTML file!"
+                },
+                channel: client_channel
+            }, (status, response) => {
+                if (status.error) {
+                    console.log("Publish failed:", status);
+                } else {
+                    console.log("Message published successfully with timetoken:", response.timetoken);
+                }
+            });
+        });
+        
+        function addMessage(msgstr) {
+            
+            const table = document.getElementById("messagesTable");
+            const newRow = table.insertRow(-1);
+            const newCell = newRow.insertCell(0);
+
+            newCell.textContent = msgstr;
+        }
+        
+    </script>
+    
 </body>
+
 </html>
