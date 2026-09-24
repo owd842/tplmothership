@@ -1,4 +1,5 @@
 <!-- https://orgfarm-bd12a2161b-dev-ed.my.salesforce-sites.com/services/apexrest/StorageVault/pubnub_client -->
+<!-- https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault/client_pubnub -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -10,6 +11,28 @@
             /* Sets a clean, standard fixed-width font stack */
             font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
         }
+
+        .large-textbox {
+            /* Sets the initial large rectangle size */
+            width: 100%;
+            max-width: 400px;
+            height: 100px;
+            
+            /* Applies the monospace font styling */
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 16px;
+            
+            /* Ensures the box is resizable both horizontally and vertically */
+            resize: both; 
+            overflow: auto;
+            
+            /* Optional styling for a cleaner look */
+            padding: 12px;
+            border: 2px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box; 
+        }
+
     </style>
 
     <!-- Reference your local file path instead of the CDN URL -->
@@ -17,8 +40,45 @@
 </head>
 <body>
     <h1>PubNub Message Publisher</h1>
-    <button id="sendBtn">Send Message</button>
 
+    <div>
+        <label for="pubnub_subscriber_key">PubNub Subscriber Key:</label>
+        <input type="text" id="pubnub_subscriber_key" name="pubnub_subscriber_key">
+    </div><br/>
+    <div>
+        <label for="pubnub_publisher_key">PubNub Publisher Key:</label>
+        <input type="text" id="pubnub_publisher_key" name="pubnub_publisher_key">
+    </div><br/>
+    <div>
+        <label for="pubnub_uuid">PubNub UUID:</label>
+        <input type="text" id="pubnub_uuid" name="pubnub_uuid">
+    </div><br/>
+    <div>
+        <label for="pubnub_channel">PubNub Channel:</label>
+        <input type="text" id="pubnub_channel" name="pubnub_channel">
+    </div><br/>
+    <div>
+        <label for="devtoolsFrontendUrl">devtoolsFrontendUrl:</label>
+        <input type="text" id="devtoolsFrontendUrl" name="devtoolsFrontendUrl" style="width: 300px; font-size: 16px;">
+        <button onclick="navigateDebug();">Navigate</button>
+    </div><br/>
+
+    <div>
+        <button onclick="clearMessages();">Clear Messages</button>
+        <button onclick="sendMessageStr(document.getElementById('message_body').value)">Send Message</button></br></br>
+        <textarea id="message_body" class="large-textbox" placeholder="Type your monospace text here..."></textarea></br>
+    </div>
+
+
+    <div>
+        <a href="javascript:void(0);" onclick="writeMessage(createBuiltInCmd('SendTestMessage'));">SendTestMessage</a><br/>
+        <a href="javascript:void(0);" onclick="writeMessage(createBuiltInCmd('GetFrontendUrls'));">GetFrontendUrls</a><br/>
+        <a href="javascript:void(0);" onclick="writeMessage(createBuiltInCmd('GetScreenCapture'))">GetScreenCapture</a><br/>
+    </div>
+
+    <br/>
+    <br/>
+    
     <br/>
     <br/>
     
@@ -26,32 +86,114 @@
         <tr>
             <th>Messages</th>
         </tr>
-        <tr>
-            <td>{ message:json_str }</td>
-        </tr>
     </table>
 
     <script>
-		if ( ! Object.hasOwn ) {
+        if ( ! Object.hasOwn ) {
 			Object.hasOwn = (obj, prop) => Object.prototype.hasOwnProperty.call(obj, prop);
 		}
 
-        const pubnub = new PubNub({
+        function getRandomCode(n=8) {
+            let base = 10**(n-1);
+            let top = 10*base;
+            return Math.floor(base + Math.random() * (top-base));
+        }
+
+        // TODO: implement custom logger to override console.log
+
+        let logmsg_index=0
+
+        function ErrorToJson(err) {
+
+            if ( ! err instanceof Error) {
+                return '';
+            }
+    
+            let jsonstr = JSON.stringify(err, (key, val) => {
+
+                if (val instanceof Error) {
+                    return {
+                        name: val.name,
+                        message: val.message,
+                        stack: val.stack,
+                    };
+                }
+
+                return val;
+            });
+
+            return jsonstr;
+        }
+
+        function LogMsg(msgstr) {
+            try {
+
+                if ( msgstr instanceof Error ) {
+                    msgstr = ErrorToJson(msgstr);
+                }
+                
+                logmsg_index++;
+                console.log('[client_pubnub.html]|['+logmsg_index+']|'+msgstr);
+            } catch (e) {
+                // discard exception
+            }
+        }
+    </script>
+
+    <script>
+
+        let messagelist = [];
+
+        let msgindex = 1;
+
+        /*
+        actualChannel: "clientid_88992233_JS_client"
+        channel: "clientid_88992233_JS_client"
+        message: {msgstr: "ping -- 15:48:40.175"}
+        publisher: "user-717"
+        subscribedChannel: "clientid_88992233_JS_client"
+        subscription: "clientid_88992233_JS_client"
+        timetoken: "17900201204555720"
+        */
+        function MessageToPayload(messageEvent, type, tmsgindex) {
+
+            // const keys = Object.getOwnPropertyNames(messageEvent).filter( (p) => typeof messageEvent[p] === 'string' );
+
+            const eventObj = { ...messageEvent }; 
+
+            if( Object.hasOwn(eventObj, 'message') )
+                delete eventObj.message;
+
+            let payload = { type: type, event: eventObj, message:messageEvent.message, ts:Date.now(), msgindex:tmsgindex };
+
+            return payload;
+        }
+
+
+        let pubnubconfig = {
             publishKey: "pub-c-a00eaad9-c35e-4a41-bd62-cdc619a6f2cc",
             subscribeKey: "sub-c-94ed1e1c-a765-4fd9-ba9e-f8ebbb47f5bd",
             userId: "user-" + Math.floor(Math.random() * 1000)
-        });
+        };
+
+        const pubnub = new PubNub(pubnubconfig);
 
         const client_channel = 'clientid_88992233_JS_client';
         
 		pubnub.addListener({
             status: function(statusEvent) {
 				if (window.onPubNubEvent) {
-					window.onPubNubEvent(JSON.stringify({ type: 'status', data: event }));
-				}
+                    try {
+                        let payload = MessageToPayload(messageEvent, 'PubNubStatus', -1);
+                        let payloadjson = JSON.stringify(payload);
+
+                        window.onPubNubEvent(JSON.stringify(payload));
+                    } catch (e) {
+                        console.log(e);
+                    }				}
 			
                 if (statusEvent.category === "PNConnectedCategory") {
-                    console.log("Successfully connected locally!");
+                    console.log("PubNub Status Notification -- Successfully connected locally!");
                 }
             },
             
@@ -61,13 +203,23 @@
 				}
 			},
 
+            // internally generated messages get bounced here as well
             message: function(messageEvent) {
-                console.log("Global message received:", messageEvent.message);
-                addMessage(JSON.stringify(messageEvent.message));
+                console.log("PubNub message received:", messageEvent);
+                
+                addMessage(messageEvent);
 				
 				if (window.onPubNubEvent) {
-					let payload = { type: 'message 1234', data: event, message:messageEvent.message };
-					window.onPubNubEvent(JSON.stringify(payload));
+
+                    try {
+                        let payload = MessageToPayload(messageEvent, 'PubNubMessage', msgindex++);
+                        messagelist.push(payload);
+                        let payloadjson = JSON.stringify(payload);
+
+                        window.onPubNubEvent(JSON.stringify(payload)); // delivers message to relay script running in background
+                    } catch (e) {
+                        console.log(e);
+                    }
 				}
             }
 
@@ -79,44 +231,87 @@
     </script>
     
     <script>
-		function sendMessage(msgstr) {
-			pubnub.publish({
-                message: {
-                    msgstr
-                },
-                channel: client_channel
-            }, (status, response) => {
-                if (status.error) {
-                    console.log("Publish failed:", status);
-                } else {
-                    console.log("Message published successfully with timetoken:", response.timetoken);
+        try {
+            let elem = null;
+            elem = document.getElementById('pubnub_channel');
+            elem.value = client_channel;
+
+            elem = document.getElementById('pubnub_subscriber_key');
+            elem.value = pubnubconfig.subscribeKey;
+
+            elem = document.getElementById('pubnub_publisher_key');
+            elem.value = pubnubconfig.publishKey;
+
+            elem = document.getElementById('pubnub_uuid');
+            elem.value = pubnubconfig.userId;
+        } catch (err) {
+            LogMsg(err);
+        }
+    </script>
+
+    <script>
+        function navigateDebug() {
+            let elem = document.getElementById('devtoolsFrontendUrl');
+            window.location.href = 'https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault/client_pubnub_navigate?url='+btoa(elem.value);
+        }
+
+        function clearMessages() {
+            const rows = document.querySelectorAll('#messagesTable tbody tr');
+
+            rows.forEach(row => {
+                if ( ! row.querySelector('th') ) {
+                    row.remove();
                 }
             });
-		}
-		
-        document.getElementById("sendBtn").addEventListener("click", () => {
+
+        }
+
+        function createBuiltInCmd(cmdname) {
+
+            let payload = { 
+                builtincmd: cmdname,
+                source: "client_pubnub.html",
+                destination: "pscdp.relay.ps1",
+                cmdid: getRandomCode(8),
+                ts: Date.now()
+            };
+
+            return payload;
+        }
+
+        function writeMessage(payload) {
+            let elem = document.getElementById('message_body');
+            elem.value = JSON.stringify(payload);
+        }
+
+        function sendMessageStr(jsonstr) {
+            let obj = JSON.parse(jsonstr);
+            sendMessage(obj);
+        }
+
+        function sendMessage(payload) {
+
             pubnub.publish({
-                message: {
-                    title: "Greeting",
-                    text: "Hello from a local HTML file!"
-                },
+                message: payload,
                 channel: client_channel
             }, (status, response) => {
                 if (status.error) {
-                    console.log("Publish failed:", status);
+                    payload.error = status;
+                    LogMsg("Publish failed: " + status);
                 } else {
-                    console.log("Message published successfully with timetoken:", response.timetoken);
+                    payload.response = response;
+                    LogMsg("Message published successfully with timetoken:" + response.timetoken);
                 }
             });
-        });
-        
-        function addMessage(msgstr) {
+        }
+
+        function addMessage(message) {
             
             const table = document.getElementById("messagesTable");
             const newRow = table.insertRow(-1);
             const newCell = newRow.insertCell(0);
 
-            newCell.textContent = msgstr;
+            newCell.textContent = JSON.stringify(message, null, 2);
         }
         
     </script>

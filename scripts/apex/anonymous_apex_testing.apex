@@ -5,11 +5,25 @@
 Datetime dt = Datetime.now();
 System.debug('starting -- ' + dt.format('yyyy-MM-dd HH:mm:ss'));
 
-List<StorageVault__ClientJob__c> jobs = [ SELECT ID FROM StorageVault__ClientJob__c ];
+Map<string, string> res = null;
 
-System.debug('number of jobs: ' + jobs.size());
+PubNub pb = new PubNub();
 
-delete jobs;
+System.debug('publishing');
+res = pb.publishMessage('test 12341234');
+
+String tt = (string) res.get('timetoken');
+
+System.debug(JSON.serialize(res));
+
+System.debug('receiving');
+List<Map<string, string>> rest = pb.receiveMessages(tt);
+// System.debug(JSON.serialize(rest));
+
+// System.debug('Response Body: ' + res.getBody());
+// System.debug('Serialized Response: ' + JSON.serialize(res));
+
+System.debug('finished');
 
 /*
 static List<string> files = FileHelper.GetFilesList();
@@ -18,4 +32,5 @@ for (string file : files) {
     System.debug(file);
 }
 */
+
 
