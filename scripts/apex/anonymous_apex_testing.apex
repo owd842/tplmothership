@@ -18,7 +18,8 @@ System.debug(JSON.serialize(res));
 
 System.debug('receiving');
 List<Map<string, string>> rest = pb.receiveMessages(tt);
-// System.debug(JSON.serialize(rest));
+System.debug('size: ' + rest.size());
+System.debug(JSON.serialize(rest));
 
 // System.debug('Response Body: ' + res.getBody());
 // System.debug('Serialized Response: ' + JSON.serialize(res));

@@ -179,8 +179,37 @@ global without sharing class PubNub {
 
         Http http = new Http();
         HTTPResponse res = http.send(req);
+        
+        string jsonstr = res.getBody();
 
-        System.debug(res.getBody());
+        try {
+            Map<String, Object> obj = (Map<String, Object>) JSON.deserializeUntyped(jsonstr);
+            
+            Set<String> keys = obj.keySet();
+
+            if ( keys.contains('m') ) {
+                List<object> omessages = (List<object>) obj.get('m');
+                List<Map<string, string>> messages = new List<Map<string, string>>();
+                
+                for ( object omsg : omessages ) {
+                    Map<string, object> tmsg = (Map<string, object>) ((Map<string, object>) omsg).get('d');
+
+                    Map<string, string> msg = new Map<string, string>();
+                    
+                    for ( string key : tmsg.keySet() ) {
+                        msg.put(key, String.valueOf(tmsg.get(key)));
+                    }
+
+                    messages.add(msg);
+                }
+
+                return messages;
+            }
+        } catch (Exception ex) {
+            Map<string, string> exmap = PubNub.convertExceptionToMap(ex);
+            System.debug(JSON.serialize(exmap));
+        }
+
 
         return null;
     }
