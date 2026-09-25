@@ -58,8 +58,9 @@
         <input type="text" id="pubnub_channel" name="pubnub_channel">
     </div><br/>
     <div>
-        <label for="devtoolsFrontendUrl">devtoolsFrontendUrl:</label>
-        <input type="text" id="devtoolsFrontendUrl" name="devtoolsFrontendUrl" style="width: 300px; font-size: 16px;">
+        <label for="devtoolsFrontendUrl">devtoolsFrontendUrl:</label><br/>
+        <input type="text" id="devtoolsFrontendUrl" name="devtoolsFrontendUrl" style="width: 300px; font-size: 16px;"><br/>
+        <input type="text" id="processCDPUrl" name="processCDPUrl" style="width: 300px; font-size: 16px;"><br/>
         <button onclick="navigateDebug();">Navigate</button>
     </div><br/>
 
@@ -252,7 +253,7 @@
     <script>
         function navigateDebug() {
             let elem = document.getElementById('devtoolsFrontendUrl');
-            window.location.href = 'https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault/client_pubnub_navigate?url='+btoa(elem.value);
+            document.getElementById('processCDPUrl').value = 'https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault/processcdp?url='+btoa(elem.value);
         }
 
         function clearMessages() {

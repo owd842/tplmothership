@@ -368,12 +368,17 @@ global without sharing class PublicRestService {
         msg.put('destination', 'pscdp.relay.ps1');
         msg.put('cmdid', Helper.GetRandomNum(8));
 
-        Map<string, string> res = pb.publishMessage(msg);
+        Map<string, string> tres = pb.publishMessage(msg);
 
-        String tt = (string) res.get('timetoken');
+        String tt = (string) tres.get('timetoken');
+
+        Logger.LogSys('timetoken: '+tt, 'processcdp');
 
         // wait for response and send back in res variable
-
+        res.addHeader('Content-Type', 'text/html; charset=utf-8');
+        res.responseBody = Blob.valueOf('timetoken: ' + tt);
+        
+        return;
     }
 
     /* ping.php

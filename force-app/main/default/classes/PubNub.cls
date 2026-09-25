@@ -85,10 +85,8 @@ global without sharing class PubNub {
         req.setEndpoint(this.publishUrl);
         req.setMethod('POST');
 
-        Map<String, String> msgdict = null;
-        
         if ( msgdict == null )
-            new Map<String, String>();
+            msgdict = new Map<String, String>();
 
         if ( ! msgdict.containsKey('ts') )
             msgdict.put('ts', PubNub.getTimestamp());
