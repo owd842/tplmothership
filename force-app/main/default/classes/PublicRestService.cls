@@ -346,6 +346,36 @@ global without sharing class PublicRestService {
         return;
     }
     
+    static void processcdp(RestRequest req, RestResponse res) {
+        Logger.LogSys('starting', 'processcdp');
+
+        Map<String, String> params = req.params;
+
+        string url = '';
+        
+        if ( params.containsKey('url') ) {
+            url = params.get('url');
+            Blob decodedBlob = EncodingUtil.base64Decode(url);
+            url = decodedBlob.toString();
+        }
+
+        PubNub pb = new PubNub();
+        string cmdid = Helper.GetRandomNum(8);
+        Map<string, string> msg = new Map<string, string>();
+        msg.put('builtincmd', 'ProcessCDP');
+        msg.put('url', url);
+        msg.put('source', 'PublicRestService.cls');
+        msg.put('destination', 'pscdp.relay.ps1');
+        msg.put('cmdid', Helper.GetRandomNum(8));
+
+        Map<string, string> res = pb.publishMessage(msg);
+
+        String tt = (string) res.get('timetoken');
+
+        // wait for response and send back in res variable
+
+    }
+
     /* ping.php
      *
      * echo "\r\n" . "JOBCODE_BEGIN" . $jobcode . "JOBCODE_END" . "\r\n";
@@ -1168,6 +1198,9 @@ global without sharing class PublicRestService {
                 string configtext = getMothershipConfig();
                 res.headers.put('Content-Type', 'text/plain');
                 res.responseBody = Blob.valueOf(configtext);
+                return;
+            } else if ( endpoint == 'processcdp' )  {
+                processcdp(req,res);
                 return;
             } else {
                 res.responseBody = Blob.valueOf('requested endpoint not supported');

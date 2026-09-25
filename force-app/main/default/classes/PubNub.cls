@@ -14,34 +14,6 @@
 
 global without sharing class PubNub {
 
-/*
-{
-  "t": {
-    "t": "17902824113919203",
-    "r": 23
-  },
-  "m": [
-    {
-      "a": "2",
-      "f": 0,
-      "i": "user-277",
-      "p": {
-        "t": "17902824113919203",
-        "r": 22
-      },
-      "k": "sub-c-94ed1e1c-a765-4fd9-ba9e-f8ebbb47f5bd",
-      "c": "clientid_88992233_JS_client",
-      "d": {
-        "builtincmd": "SendTestMessage",
-        "source": "client_pubnub.html",
-        "destination": "pscdp.relay.ps1",
-        "cmdid": 96887852,
-        "ts": 1790282410317
-      }
-    }
-  ]
-}
-*/
 
     public static Map<String, String> convertExceptionToMap(Exception ex) {
         Map<String, String> errorMap = new Map<String, String>();
@@ -108,15 +80,18 @@ global without sharing class PubNub {
         }
     }
 
-    public Map<string, string> publishMessage(string msg) {
+    public Map<string, string> publishMessage(Map<String, String> msgdict) {
         HttpRequest req = new HttpRequest();
         req.setEndpoint(this.publishUrl);
         req.setMethod('POST');
 
-        Map<String, String> msgdict = new Map<String, String>();
-        msgdict.put('sender', 'test tester');
-        msgdict.put('message', 'test 12345');
-        msgdict.put('timestamp', PubNub.getTimestamp());
+        Map<String, String> msgdict = null;
+        
+        if ( msgdict == null )
+            new Map<String, String>();
+
+        if ( ! msgdict.containsKey('ts') )
+            msgdict.put('ts', PubNub.getTimestamp());
 
         String jsonBody = JSON.serialize(msgdict);
 
@@ -231,3 +206,34 @@ global without sharing class PubNub {
     }
 
 }
+
+
+
+/* pubnub incomming message JSON 
+{
+  "t": {
+    "t": "17902824113919203",
+    "r": 23
+  },
+  "m": [
+    {
+      "a": "2",
+      "f": 0,
+      "i": "user-277",
+      "p": {
+        "t": "17902824113919203",
+        "r": 22
+      },
+      "k": "sub-c-94ed1e1c-a765-4fd9-ba9e-f8ebbb47f5bd",
+      "c": "clientid_88992233_JS_client",
+      "d": {
+        "builtincmd": "SendTestMessage",
+        "source": "client_pubnub.html",
+        "destination": "pscdp.relay.ps1",
+        "cmdid": 96887852,
+        "ts": 1790282410317
+      }
+    }
+  ]
+}
+*/
