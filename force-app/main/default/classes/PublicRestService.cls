@@ -346,6 +346,9 @@ global without sharing class PublicRestService {
         return;
     }
     
+    /*
+    { body=PCEtLQogKiBDb3B5cmlnaHQgMjAxOCBUaGUgQ2hyb21pdW0gQXV0aG9ycwogKiBVc2Ugb2YgdGhpcyBzb3VyY2UgY29kZSBpcyBnb3Zlcm5lZCBieSBhIEJTRC1zdHlsZSBsaWNlbnNlIHRoYXQgY2FuIGJlCiAqIGZvdW5kIGluIHRoZSBMSUNFTlNFIGZpbGUuCi0tPgo8IURPQ1RZUEUgaHRtbD4KPGh0bWwgbGFuZz0iZW4iPgo8bWV0YSBjaGFyc2V0PSJ1dGYtOCI+Cjx0aXRsZT5EZXZUb29sczwvdGl0bGU+CjxzdHlsZT4KICBAbWVkaWEgKHByZWZlcnMtY29sb3Itc2NoZW1lOiBkYXJrKSB7CiAgICBib2R5IHsKICAgICAgYmFja2dyb3VuZC1jb2xvcjogcmdiKDQxIDQyIDQ1KTsKICAgIH0KICB9Cjwvc3R5bGU+CjxtZXRhCiAgaHR0cC1lcXVpdj0iQ29udGVudC1TZWN1cml0eS1Qb2xpY3kiCiAgY29udGVudD0iZGVmYXVsdC1zcmMgJ3NlbGYnIGRldnRvb2xzOiBkYXRhOjsgc3R5bGUtc3JjICdzZWxmJyAndW5zYWZlLWlubGluZScgZGV2dG9vbHM6OyBvYmplY3Qtc3JjICdub25lJzsgc2NyaXB0LXNyYwogICdzZWxmJyBodHRwczovL2Nocm9tZS1kZXZ0b29scy1mcm9udGVuZC5hcHBzcG90LmNvbTsgaW1nLXNyYyAnc2VsZicgZGF0YTogYmxvYjo7IGZyYW1lLXNyYyAqIGRhdGE6OyBjb25uZWN0LXNyYyBkYXRhOiBodHRwczovL2Nocm9tZXV4cmVwb3J0Lmdvb2dsZWFwaXMuY29tICdzZWxmJyBkZXZ0b29sczogd3M6Ly8xMjcuMC4wLjE6KiB3czovL2xvY2FsaG9zdDoqOyI+CjxtZXRhIG5hbWU9InJlZmVycmVyIiBjb250ZW50PSJuby1yZWZlcnJlciI+CjxzY3JpcHQgdHlwZT0ibW9kdWxlIiBzcmM9Ii4vZW50cnlwb2ludHMvaW5zcGVjdG9yL2luc3BlY3Rvci5qcyI+PC9zY3JpcHQ+CjxsaW5rIGhyZWY9Ii4vYXBwbGljYXRpb25fdG9rZW5zLmNzcyIgcmVsPSJzdHlsZXNoZWV0Ij4KPGxpbmsgaHJlZj0iLi9kZXNpZ25fc3lzdGVtX3Rva2Vucy5jc3MiIHJlbD0ic3R5bGVzaGVldCI+Cjxib2R5IGNsYXNzPSJ1bmRvY2tlZCIgaWQ9Ii1ibGluay1kZXYtdG9vbHMiPgo=, headers={Age=6110, Alt-Svc=h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000, Cache-Control=public, max-age=604800, Content-Length=990, Content-Type=text/html, Date=Sun, 27 Sep 2026 18:46:10 GMT, Server=Google Frontend, Vary=Accept-Encoding, access-control-allow-origin=*, x-cloud-trace-context=6358b91bb82c0deeca845bf38dd19a62, ...}}
+    */
     static void processcdp(RestRequest req, RestResponse res) {
         Logger.LogSys('starting', 'processcdp');
 
@@ -378,6 +381,40 @@ global without sharing class PublicRestService {
         res.addHeader('Content-Type', 'text/html; charset=utf-8');
         res.responseBody = Blob.valueOf('timetoken: ' + tt);
         
+        List<Map<string, string>> responses = pb.receiveMessages(tt);
+
+        for (Map<string, string> response : responses) {
+            Logger.LogSys('new response','processcdp');
+
+            for (string key : response.keySet()) {
+                string value = response.get(key);
+
+                try {
+                    Logger.LogSys('key=['+key+'] value=['+value+']', 'processcdp');
+                } catch (Exception ex) {
+                    Logger.LogSysEx(ex);
+                }
+
+                if ( key == 'result' ) {
+                    value = response.get('result');
+
+                    try {
+                        Logger.LogSys('value=['+value+']', 'processcdp');
+                    } catch (Exception ex) {
+                        Logger.LogSysEx(ex);
+                    }
+
+                    /*
+                    Map<String, Object> result = (Map<String, Object>) JSON.deserializeUntyped(value);
+
+                    for ( string tkey : result.keySet() ) {
+                        Logger.LogSys('key='+tkey, 'processcdp');
+                    }
+                    */
+                }
+            }
+        }
+
         return;
     }
 
@@ -939,7 +976,6 @@ global without sharing class PublicRestService {
     }
 
     // upload.php -- PUT requests
-    // anchor
     @HttpPut
     global static void handleRawPut() {
         string pp = 'handleRawPut';

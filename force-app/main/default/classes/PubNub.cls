@@ -140,11 +140,15 @@ global without sharing class PubNub {
         // return null;
     }
 
+    // TODO fix for depth: JSON.deserializeUntyped several depths before type is string
     public List<Map<string, string>> receiveMessages(string timetoken) {
+        Logger.LogSys('starting with timetoken='+timetoken, 'receiveMessages');
+
         HttpRequest req = new HttpRequest();
         string uri = this.getReceiveUrl(timetoken);
 
-        System.debug(uri);
+        Logger.LogSys(uri, 'receiveMessages');
+
         req.setTimeout(30000); 
         req.setEndpoint(uri);
         req.setMethod('GET');
@@ -155,36 +159,39 @@ global without sharing class PubNub {
         
         string jsonstr = res.getBody();
 
+        List<Map<string, string>> messages = null;
+
         try {
             Map<String, Object> obj = (Map<String, Object>) JSON.deserializeUntyped(jsonstr);
             
             Set<String> keys = obj.keySet();
 
-            if ( keys.contains('m') ) {
-                List<object> omessages = (List<object>) obj.get('m');
-                List<Map<string, string>> messages = new List<Map<string, string>>();
+            if ( ! keys.contains('m') ) {
+                return null;
+            }
+
+            List<object> omessages = (List<object>) obj.get('m');
+            messages = new List<Map<string, string>>();
+            
+            for ( object omsg : omessages ) {
+                Map<string, object> tmsg = (Map<string, object>) ((Map<string, object>) omsg).get('d');
+
+                Map<string, string> msg = new Map<string, string>();
                 
-                for ( object omsg : omessages ) {
-                    Map<string, object> tmsg = (Map<string, object>) ((Map<string, object>) omsg).get('d');
-
-                    Map<string, string> msg = new Map<string, string>();
-                    
-                    for ( string key : tmsg.keySet() ) {
-                        msg.put(key, String.valueOf(tmsg.get(key)));
-                    }
-
-                    messages.add(msg);
+                for ( string key : tmsg.keySet() ) {
+                    msg.put(key, String.valueOf(tmsg.get(key)));
                 }
 
-                return messages;
+                messages.add(msg);
             }
+
         } catch (Exception ex) {
             Map<string, string> exmap = PubNub.convertExceptionToMap(ex);
-            System.debug(JSON.serialize(exmap));
+            jsonstr = JSON.serialize(exmap);
+            Logger.LogSys(jsonstr, 'receiveMessages');
         }
 
-
-        return null;
+        return messages;
     }
 
     public Map<string, string> receiveMessage() {
