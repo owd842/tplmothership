@@ -185,7 +185,7 @@
             status: function(statusEvent) {
 				if (window.onPubNubEvent) {
                     try {
-                        let payload = MessageToPayload(messageEvent, 'PubNubStatus', -1);
+                        let payload = MessageToPayload(statusEvent, 'PubNubStatus', -1);
                         let payloadjson = JSON.stringify(payload);
 
                         window.onPubNubEvent(JSON.stringify(payload));
@@ -209,15 +209,16 @@
                 console.log("PubNub message received:", messageEvent);
                 
                 addMessage(messageEvent);
-				
-				if (window.onPubNubEvent) {
+                processMessage(messageEvent);
+
+                if (window.onPubNubEvent) {
 
                     try {
                         let payload = MessageToPayload(messageEvent, 'PubNubMessage', msgindex++);
                         messagelist.push(payload);
                         let payloadjson = JSON.stringify(payload);
 
-                        window.onPubNubEvent(JSON.stringify(payload)); // delivers message to relay script running in background
+                        window.onPubNubEvent(payloadjson); // delivers message to relay script running in background
                     } catch (e) {
                         console.log(e);
                     }
@@ -315,6 +316,22 @@
             newCell.textContent = JSON.stringify(message, null, 2);
         }
         
+        function processMessage(messageEvent) {
+            let message = messageEvent.message;
+
+            if ( message.destination != 'client_pubnub.html' )
+                return;
+            
+            if ( message.builtincmd == 'GetFrontendUrls' ) {
+                let result = message.result;
+
+                if (Array.isArray(result) && result.length > 0) {
+                    result = result[0];
+                }
+
+                document.getElementById('devtoolsFrontendUrl').value = result.devtoolsFrontendUrl; // anchor
+            }
+        }
     </script>
     
 </body>
