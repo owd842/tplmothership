@@ -5,6 +5,11 @@
 Datetime dt = Datetime.now();
 System.debug('starting -- ' + dt.format('yyyy-MM-dd HH:mm:ss'));
 
+Logger.LogSys('test','anonymous apex test');
+
+System.debug('finished -- ' + dt.format('yyyy-MM-dd HH:mm:ss'));
+
+/*
 Map<string, string> res = null;
 
 PubNub pb = new PubNub();

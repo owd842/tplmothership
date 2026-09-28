@@ -141,7 +141,7 @@ global without sharing class PubNub {
     }
 
     // TODO fix for depth: JSON.deserializeUntyped several depths before type is string
-    public List<Map<string, string>> receiveMessages(string timetoken) {
+    public List<Map<string, object>> receiveMessages(string timetoken) {
         Logger.LogSys('starting with timetoken='+timetoken, 'receiveMessages');
 
         HttpRequest req = new HttpRequest();
@@ -159,7 +159,7 @@ global without sharing class PubNub {
         
         string jsonstr = res.getBody();
 
-        List<Map<string, string>> messages = null;
+        List<Map<string, object>> messages = null;
 
         try {
             Map<String, Object> obj = (Map<String, Object>) JSON.deserializeUntyped(jsonstr);
@@ -171,18 +171,12 @@ global without sharing class PubNub {
             }
 
             List<object> omessages = (List<object>) obj.get('m');
-            messages = new List<Map<string, string>>();
+            messages = new List<Map<string, object>>();
             
             for ( object omsg : omessages ) {
                 Map<string, object> tmsg = (Map<string, object>) ((Map<string, object>) omsg).get('d');
 
-                Map<string, string> msg = new Map<string, string>();
-                
-                for ( string key : tmsg.keySet() ) {
-                    msg.put(key, String.valueOf(tmsg.get(key)));
-                }
-
-                messages.add(msg);
+                messages.add(tmsg);
             }
 
         } catch (Exception ex) {

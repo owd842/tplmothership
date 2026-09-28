@@ -1,8 +1,7 @@
 // cmd /k F:\__Binaries\sfdx\client\bin\sf.cmd deploy metadata -m ApexClass:Logger -o storagevault941@agentforce.com
-global without sharing class Logger { 
+global without sharing class Logger {     
 
     public static string logsessionid = Helper.GetRandomNum(8);
-
     public static integer logindex = 1;
 
     public static void TryEmptyLogs() {
@@ -69,12 +68,39 @@ global without sharing class Logger {
             
             StorageVault__LogEvent__e event = new StorageVault__LogEvent__e( StorageVault__Payload__c = logmsgstr);
             
-            EventBus.publish(event);   
-            logindex = logindex + 1;
+            Database.SaveResult sr = EventBus.publish(event);
+
+            if (sr.isSuccess()) {
+                logindex = logindex + 1;
+
+                // The event was successfully enqueued. 
+                System.debug('Successfully enqueued event for publishing.');
+                
+                // You can also track the Event UUID for correlation later if needed
+                String eventUuid = EventBus.getOperationId(sr);
+                System.debug('Event UUID: ' + eventUuid);
+            } else {
+                // The event failed validation or failed to enter the queue
+                for(Database.Error err : sr.getErrors()) {
+                    System.debug('Enqueue Error: ' + err.getStatusCode() + ' - ' + err.getMessage());
+                }
+            }
+            
+            System.debug(logmsgstr);
 
         } catch (Exception ex) {
-            
-        }        
+            String exceptionString = String.format('Exception Type: {0} | Message: {1} | Line: {2} \nStack Trace: {3}', 
+                new List<Object>{
+                    ex.getTypeName(),
+                    ex.getMessage(),
+                    ex.getLineNumber(),
+                    ex.getStackTraceString()
+                } );
+
+            System.debug(exceptionString);
+        }
+
+        System.debug('LogSys');
     }
     
     public static void PublishMsgLogger(string source, string tsource, string msg, RestRequest req) {
