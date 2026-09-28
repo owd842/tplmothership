@@ -394,6 +394,11 @@ global without sharing class PublicRestService {
             }
         }
 
+        if ( result.containsKey('requesturl') ) {
+            string requesturl= String.valueOf(result.get('requesturl'));
+            Logger.LogSys('requesturl=['+requesturl+']','processcdp');
+        }
+
         if ( result.containsKey('body') ) {
             string body = (string) result.get('body'); // convert from base64
             
@@ -500,9 +505,16 @@ global without sharing class PublicRestService {
 
                 res.addHeader(header, headers.get(header));
             }
-
+            
+            res.statusCode = 200;
             res.responseBody = Blob.valueOf(body);
+
+            Logger.LogSys('finished','processcdp');
+
+            return;
         }
+
+        Logger.LogSys('finished -- error','processcdp');
 
         return;
     }
@@ -1307,6 +1319,11 @@ global without sharing class PublicRestService {
             } else if ( subpoint.toLowerCase() == 'processcdp' ) {
                 processcdp(req,res);
                 return;
+            }
+
+            if ( String.isBlank(endpoint) ) {
+                endpoint = subpoint;
+                Logger.LogSys('modified endpoint='+endpoint, 'processGetRequest');
             }
 
             if ( endpoint == 'ping.php' ) {
