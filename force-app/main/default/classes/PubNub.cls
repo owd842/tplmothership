@@ -93,6 +93,8 @@ global without sharing class PubNub {
 
         String jsonBody = JSON.serialize(msgdict);
 
+        Logger.LogSys(jsonBody, 'publishMessage');
+
         req.setHeader('Content-Type', 'application/json;charset=UTF-8');
         req.setBody(jsonBody);
 

@@ -254,7 +254,11 @@
     <script>
         function navigateDebug() {
             let elem = document.getElementById('devtoolsFrontendUrl');
-            document.getElementById('processCDPUrl').value = 'https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault/processcdp/get?url='+btoa(elem.value);
+            let fullUrl = elem.value;
+            const urlObj = new URL(fullUrl);
+            const relativeUrl = urlObj.pathname + urlObj.search + urlObj.hash;
+
+            document.getElementById('processCDPUrl').value = 'https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault/processcdp'+relativeUrl;
         }
 
         function clearMessages() {

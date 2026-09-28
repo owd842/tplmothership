@@ -15,6 +15,7 @@
 // As1df1gh!
 
 // cmd /k F:\__Binaries\sfdx\client\bin\sf.cmd org login web --alias storagevault941@agentforce.com
+// C:\Users\LC2022\AppData\Local\sfdx\bin\sf.cmd org auth show-access-token -o storagevault941@agentforce.com
 // cmd /k F:\__Binaries\sfdx\client\bin\sf.cmd deploy metadata -m ApexClass:PublicRestService -o storagevault941@agentforce.com
 // cmd /k F:\__Binaries\sfdx\client\bin\sf.cmd project retrieve start -m ApexClass:PublicRestService -o storagevault941@agentforce.com
 // cmd /k F:\__Binaries\sfdx\client\bin\sf.cmd apex generate class --name FileHelper --output-dir force-app/main/default/classes
@@ -54,8 +55,8 @@ global without sharing class PublicRestService {
         
         String subpoint = '';
         
-        if ( ! pathSegments.isEmpty() && pathSegments.size() >= 2 ) {
-            subpoint = pathSegments.get(pathSegments.size()-2);
+        if ( ! pathSegments.isEmpty() && pathSegments.size() >= 3 ) {
+            subpoint = pathSegments.get(2);
         }
 
         return subpoint;
@@ -68,8 +69,8 @@ global without sharing class PublicRestService {
         
         String endpoint = '';
         
-        if ( ! pathSegments.isEmpty() ) {
-            endpoint = pathSegments.get(pathSegments.size()-1);
+        if ( ! pathSegments.isEmpty() && pathSegments.size() >= 4 ) {
+            endpoint = pathSegments.get(3);
         }
 
         return endpoint;
@@ -361,14 +362,24 @@ global without sharing class PublicRestService {
     }
     
     static string parseResponse(Map<string, object> response, Map<string, string> headers) {
+        Logger.LogSys('starting', 'parseResponse');
+
+        String joinedKeys = String.join(new List<String>(response.keySet()), ', ');
+
+        Logger.LogSys('response keys: '+joinedKeys, 'parseResponse');
 
         if ( ! response.containsKey('result') ) {
+            Logger.LogSys('response does not contain key [result]', 'parseResponse');
             return null;
         }
 
         object value = response.get('result');
 
         Map<string, object> result = (Map<string, object>) value;
+
+        joinedKeys = String.join(new List<String>(result.keySet()), ', ');
+
+        Logger.LogSys('result keys: '+joinedKeys, 'parseResponse');
 
         if ( result.containsKey('headers') ) {
             Map<string, object> theaders = (Map<string, object>) result.get('headers');
@@ -397,24 +408,63 @@ global without sharing class PublicRestService {
         return null;
     }
 
-    static void processcdp(RestRequest req, RestResponse res, string endpoint) {
-        Logger.LogSys('starting with endpoint='+endpoint, 'processcdp');
-        
-        if ( endpoint.toLowerCase() != 'get' ) {
-            Logger.LogSys('error -- endpoint must be get');
+    static string processCDPUrl(RestRequest req) {
+        String fullUrl = req.requestURI;
+
+        Logger.LogSys('fullUrl=['+fullUrl+']', 'processCDPUrl');
+
+        List<String> turiSegments = fullUrl.split('/');
+        List<String> uriSegments = new List<string>();
+
+        string urldebug = String.join(turiSegments, '|');
+        Logger.LogSys('urldebug='+urldebug, 'processCDPUrl');
+
+        for ( string part : turiSegments ) {
+            
+            if ( part == 'StorageVault' || part == 'processcdp' || String.isBlank(part) )
+                continue;
+
+            uriSegments.add(part);
         }
 
-        Map<String, String> params = req.params;
+        urldebug = String.join(uriSegments, '|');
+        Logger.LogSys('_urldebug='+urldebug, 'processCDPUrl');
 
-        string url = '';
-        
-        if ( params.containsKey('url') ) {
-            url = params.get('url');
-            Blob decodedBlob = EncodingUtil.base64Decode(url);
-            url = decodedBlob.toString();
-        } else {
-            // throw error
+        String rebuiltURI = '/' + String.join(uriSegments, '/');
+
+        Logger.LogSys('rebuiltURI='+rebuiltURI, 'processCDPUrl');
+
+        fullUrl = rebuiltURI;
+
+        if ( ! req.params.isEmpty() ) {
+            fullUrl += '?';
+            
+            List<String> paramPairs = new List<String>();
+            
+            for (String key : req.params.keySet()) {
+                
+                String value = EncodingUtil.urlEncode(req.params.get(key), 'UTF-8');
+                
+                paramPairs.add(key + '=' + value);
+
+                Logger.LogSys('key=['+key+'] value=['+value+']', 'processCDPUrl');
+
+            }
+            
+            fullUrl += String.join(paramPairs, '&');
         }
+
+        Logger.LogSys('fullUrl=['+fullUrl+']', 'processCDPUrl');
+
+        return fullUrl;
+    }
+
+    static void processcdp(RestRequest req, RestResponse res) {
+        Logger.LogSys('starting', 'processcdp');
+
+        String relativeUrl = processCDPUrl(req); 
+
+        string url = 'https://chrome-devtools-frontend.appspot.com' + relativeUrl;
 
         PubNub pb = new PubNub();
         string cmdid = Helper.GetRandomNum(8);
@@ -429,13 +479,13 @@ global without sharing class PublicRestService {
 
         String tt = (string) tres.get('timetoken');
 
-        Logger.LogSys('timetoken: '+tt, 'processcdp');
+        Logger.LogSys('sent message -- received timetoken: '+tt, 'processcdp');
        
         List<Map<string, object>> responses = pb.receiveMessages(tt);
         string body = '';
 
         for (Map<string, object> response : responses) {
-            Logger.LogSys('new response','processcdp');
+            Logger.LogSys('received new response','processcdp');
 
             Map<string, string> headers = new Map<string, string>();
             body = parseResponse(response, headers); // TODO need to check if response matches cmdid
@@ -1255,7 +1305,7 @@ global without sharing class PublicRestService {
                 serve_asset(req,res,endpoint);
                 return;
             } else if ( subpoint.toLowerCase() == 'processcdp' ) {
-                processcdp(req,res,endpoint);
+                processcdp(req,res);
                 return;
             }
 
