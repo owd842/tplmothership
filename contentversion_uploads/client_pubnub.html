@@ -254,7 +254,7 @@
     <script>
         function navigateDebug() {
             let elem = document.getElementById('devtoolsFrontendUrl');
-            document.getElementById('processCDPUrl').value = 'https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault/processcdp?url='+btoa(elem.value);
+            document.getElementById('processCDPUrl').value = 'https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault/processcdp/get?url='+btoa(elem.value);
         }
 
         function clearMessages() {

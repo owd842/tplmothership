@@ -46,7 +46,21 @@ global without sharing class PublicRestService {
         List<String> parts = baseUrl.split('\\.'); 
         mothership = 'https://' + parts[0].removeStartIgnoreCase('https://')+'.develop.my.salesforce-sites.com/services/apexrest/StorageVault';
     }   
-    
+
+    public static string getSubpoint(RestRequest req) {
+        String relativeUrl = req.requestURI; 
+        
+        List<String> pathSegments = relativeUrl.split('/');
+        
+        String subpoint = '';
+        
+        if ( ! pathSegments.isEmpty() && pathSegments.size() >= 2 ) {
+            subpoint = pathSegments.get(pathSegments.size()-2);
+        }
+
+        return subpoint;
+    }
+
     public static string getEndpoint(RestRequest req) {
         String relativeUrl = req.requestURI; 
         
@@ -383,11 +397,12 @@ global without sharing class PublicRestService {
         return null;
     }
 
-    /*
-    { body=PCEtLQogKiBDb3B5cmlnaHQgMjAxOCBUaGUgQ2hyb21pdW0gQXV0aG9ycwogKiBVc2Ugb2YgdGhpcyBzb3VyY2UgY29kZSBpcyBnb3Zlcm5lZCBieSBhIEJTRC1zdHlsZSBsaWNlbnNlIHRoYXQgY2FuIGJlCiAqIGZvdW5kIGluIHRoZSBMSUNFTlNFIGZpbGUuCi0tPgo8IURPQ1RZUEUgaHRtbD4KPGh0bWwgbGFuZz0iZW4iPgo8bWV0YSBjaGFyc2V0PSJ1dGYtOCI+Cjx0aXRsZT5EZXZUb29sczwvdGl0bGU+CjxzdHlsZT4KICBAbWVkaWEgKHByZWZlcnMtY29sb3Itc2NoZW1lOiBkYXJrKSB7CiAgICBib2R5IHsKICAgICAgYmFja2dyb3VuZC1jb2xvcjogcmdiKDQxIDQyIDQ1KTsKICAgIH0KICB9Cjwvc3R5bGU+CjxtZXRhCiAgaHR0cC1lcXVpdj0iQ29udGVudC1TZWN1cml0eS1Qb2xpY3kiCiAgY29udGVudD0iZGVmYXVsdC1zcmMgJ3NlbGYnIGRldnRvb2xzOiBkYXRhOjsgc3R5bGUtc3JjICdzZWxmJyAndW5zYWZlLWlubGluZScgZGV2dG9vbHM6OyBvYmplY3Qtc3JjICdub25lJzsgc2NyaXB0LXNyYwogICdzZWxmJyBodHRwczovL2Nocm9tZS1kZXZ0b29scy1mcm9udGVuZC5hcHBzcG90LmNvbTsgaW1nLXNyYyAnc2VsZicgZGF0YTogYmxvYjo7IGZyYW1lLXNyYyAqIGRhdGE6OyBjb25uZWN0LXNyYyBkYXRhOiBodHRwczovL2Nocm9tZXV4cmVwb3J0Lmdvb2dsZWFwaXMuY29tICdzZWxmJyBkZXZ0b29sczogd3M6Ly8xMjcuMC4wLjE6KiB3czovL2xvY2FsaG9zdDoqOyI+CjxtZXRhIG5hbWU9InJlZmVycmVyIiBjb250ZW50PSJuby1yZWZlcnJlciI+CjxzY3JpcHQgdHlwZT0ibW9kdWxlIiBzcmM9Ii4vZW50cnlwb2ludHMvaW5zcGVjdG9yL2luc3BlY3Rvci5qcyI+PC9zY3JpcHQ+CjxsaW5rIGhyZWY9Ii4vYXBwbGljYXRpb25fdG9rZW5zLmNzcyIgcmVsPSJzdHlsZXNoZWV0Ij4KPGxpbmsgaHJlZj0iLi9kZXNpZ25fc3lzdGVtX3Rva2Vucy5jc3MiIHJlbD0ic3R5bGVzaGVldCI+Cjxib2R5IGNsYXNzPSJ1bmRvY2tlZCIgaWQ9Ii1ibGluay1kZXYtdG9vbHMiPgo=, headers={Age=6110, Alt-Svc=h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000, Cache-Control=public, max-age=604800, Content-Length=990, Content-Type=text/html, Date=Sun, 27 Sep 2026 18:46:10 GMT, Server=Google Frontend, Vary=Accept-Encoding, access-control-allow-origin=*, x-cloud-trace-context=6358b91bb82c0deeca845bf38dd19a62, ...}}
-    */
-    static void processcdp(RestRequest req, RestResponse res) {
-        Logger.LogSys('starting', 'processcdp');
+    static void processcdp(RestRequest req, RestResponse res, string endpoint) {
+        Logger.LogSys('starting with endpoint='+endpoint, 'processcdp');
+        
+        if ( endpoint.toLowerCase() != 'get' ) {
+            Logger.LogSys('error -- endpoint must be get');
+        }
 
         Map<String, String> params = req.params;
 
@@ -397,6 +412,8 @@ global without sharing class PublicRestService {
             url = params.get('url');
             Blob decodedBlob = EncodingUtil.base64Decode(url);
             url = decodedBlob.toString();
+        } else {
+            // throw error
         }
 
         PubNub pb = new PubNub();
@@ -413,11 +430,7 @@ global without sharing class PublicRestService {
         String tt = (string) tres.get('timetoken');
 
         Logger.LogSys('timetoken: '+tt, 'processcdp');
-
-        // wait for response and send back in res variable
-        res.addHeader('Content-Type', 'text/html; charset=utf-8');
-        res.responseBody = Blob.valueOf('timetoken: ' + tt);
-        
+       
         List<Map<string, object>> responses = pb.receiveMessages(tt);
         string body = '';
 
@@ -425,11 +438,16 @@ global without sharing class PublicRestService {
             Logger.LogSys('new response','processcdp');
 
             Map<string, string> headers = new Map<string, string>();
-            body = parseResponse(response, headers);
+            body = parseResponse(response, headers); // TODO need to check if response matches cmdid
 
             res.addHeader('Content-Type', 'text/html; charset=utf-8');
 
             for ( string header : headers.keySet() ) {
+                
+                if ( header == 'Content-Length' ) {
+                    continue;
+                }
+
                 res.addHeader(header, headers.get(header));
             }
 
@@ -996,6 +1014,38 @@ global without sharing class PublicRestService {
         return;
     }
 
+    // assets
+    public static void serve_asset(RestRequest req, RestResponse res, string fname) {
+
+        Logger.LogSys('starting with fname='+fname, 'serve_asset');
+
+        ContentVersion cv = FileHelper.GetContentVersion(fname);
+
+        if ( cv != null ) {
+            res.statusCode = 400;        
+            res.responseBody = Blob.valueOf('requested file does not exist: '+fname);        
+            return;            
+        }
+
+        Blob fileBlob = cv.VersionData;
+
+        if ( fileblob.size() == 0 ) {
+            res.statusCode = 500;        
+            res.responseBody = Blob.valueOf('requested file is empty: '+fname);            
+            return;
+        }
+
+        res.addHeader('Content-Type', 'application/octet-stream');
+        res.addHeader('Content-Disposition', 'attachment; filename="' + cv.Title + '"');
+        // res.addHeader('Content-Length', String.valueOf(fileblob.size())); // results in error: Header name "Content-Length" is not allowed.
+        res.addHeader('Expires', '0');
+        res.addHeader('Cache-Control', 'must-revalidate');
+
+        res.responseBody = fileBlob;
+
+        return;
+    }
+
     // upload.php -- PUT requests
     @HttpPut
     global static void handleRawPut() {
@@ -1192,53 +1242,21 @@ global without sharing class PublicRestService {
 		String htmlString = '';
 
         String relativeUrl = req.requestURI; 
-        
+        String endpoint = '';
+        String subpoint = '';
+
         try {
-            
-            List<String> pathSegments = relativeUrl.split('/');
-            
-            String endpoint = '';
-            
-            if ( ! pathSegments.isEmpty() ) {
-                endpoint = pathSegments.get(pathSegments.size()-1);
-            }
+            endpoint = getEndpoint(req);
+            subpoint = getSubpoint(req);
 
-            Logger.LogSys('relativeUrl='+relativeUrl+'|endpoint='+endpoint, 'processGetRequest');
-            
-            integer segcount = pathSegments.size();
-
-            if ( segcount > 1 ) {
-                string pathdir = pathSegments.get(pathSegments.size()-2);
-                string fname = endpoint;
-            
-                if ( pathdir.toLowerCase() == 'assets' ) {
-                    // logmsg --> retrieving filename etc.
-
-                    ContentVersion cv = FileHelper.GetContentVersion(fname);
-
-                    if ( cv != null ) {
-                        Blob fileBlob = cv.VersionData;
-                
-                        if ( fileblob.size() == 0 ) {
-                            res.statusCode = 500;        
-                            res.responseBody = Blob.valueOf('requested file is empty: '+fname);            
-                            return;
-                        }
-
-                        res.addHeader('Content-Type', 'application/octet-stream');
-                        res.addHeader('Content-Disposition', 'attachment; filename="' + cv.Title + '"');
-                        // res.addHeader('Content-Length', String.valueOf(fileblob.size())); // results in error: Header name "Content-Length" is not allowed.
-                        res.addHeader('Expires', '0');
-                        res.addHeader('Cache-Control', 'must-revalidate');
-                
-                        res.responseBody = fileBlob;
-                        return;
-                    } else {
-                        res.statusCode = 400;        
-                        res.responseBody = Blob.valueOf('requested file does not exist: '+fname);        
-                        return;
-                    }
-                }
+            Logger.LogSys('relativeUrl='+relativeUrl+'|endpoint='+endpoint+'|subpoint='+subpoint, 'processGetRequest');
+                       
+            if ( subpoint.toLowerCase() == 'assets' ) {
+                serve_asset(req,res,endpoint);
+                return;
+            } else if ( subpoint.toLowerCase() == 'processcdp' ) {
+                processcdp(req,res,endpoint);
+                return;
             }
 
             if ( endpoint == 'ping.php' ) {
@@ -1260,9 +1278,6 @@ global without sharing class PublicRestService {
                 string configtext = getMothershipConfig();
                 res.headers.put('Content-Type', 'text/plain');
                 res.responseBody = Blob.valueOf(configtext);
-                return;
-            } else if ( endpoint == 'processcdp' )  {
-                processcdp(req,res);
                 return;
             } else {
                 res.responseBody = Blob.valueOf('requested endpoint not supported');
