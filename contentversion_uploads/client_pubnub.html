@@ -388,7 +388,41 @@
                 elem = document.getElementById("activetarget_screenshot");
                 elem.innerText = result['screenshot'];
             } else if ( message.builtincmd == 'RefreshTargets' ) {
-                let result = message.result;
+                let targets = message.result;
+
+                const table = document.getElementById("targetsList"); // anchor
+                const existingTbodys = table.querySelectorAll("tbody");
+                existingTbodys.forEach(tbody => tbody.remove());
+
+                for ( let i = 0; i<targets.length; i++) {
+                    let target = targets[i];
+                    
+                    const tbody = document.createElement("tbody");
+
+                    const tr = document.createElement("tr");
+
+                    // Title, url, Target ID, Session ID, Screenshot
+                    
+                    let items = [ 'title', 'url', 'targetId', 'sessionID', 'screenshot' ];
+                    
+                    const th = document.createElement("th");
+                    th.style.textAlign = "right";
+                    th.scope = "row"; 
+                    th.textContent = "Title";
+
+                    tr.appendChild(th);
+
+                    const td = document.createElement("td");
+                    td.textContent = target['title'];
+
+                    tr.appendChild(td);
+
+                    tbody.appendChild(tr);
+                    
+
+
+                    table.appendChild(tbody);                    
+                }
 
                 // iterate through list and update table accordingly
                 //targetsList, remove all tbody and reinsert
