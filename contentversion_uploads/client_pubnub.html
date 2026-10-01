@@ -78,30 +78,16 @@
 
     <br/>
     <br/>
-    
+
     <div>
-        <table>
-            <tr>
-                <th><a href="#">Active Target</a></th>
-            </tr>
-            <tr><td>SessionID:</td><td></td></tr>
-            <tr><td>URL:</td><td></td></tr>
-            <tr><td>Title:</td><td></td></tr>
-            <tr><td>Screenshot:</td><td></td></tr>
-        </table>
+        <a href="javascript:void(0);" onclick="sendMessage(createBuiltInCmd('RefreshTargets'));">Refresh Targets</a>
     </div>
 
     <br/>
 
     <div>
-        <a href="#">Refresh Targets</a>
-    </div>
-
-    <br/>
-
-    <div>
-        <table>
-            <tbody id="target_a">
+        <table id="targetsList">
+            <tbody>
                 <tr>
                     <th scope="row" style="text-align: right;">Title</th>
                     <td>GMail</td>
@@ -111,16 +97,21 @@
                     <td>https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault/client_pubnub</td>
                 </tr>
                 <tr>
-                    <th scope="row" style="text-align: right;">ID</th>
+                    <th scope="row" style="text-align: right;">Target ID</th>
                     <td>1CA23F6D20DDFF1AAF24A25074BB2692</td>
                 </tr>
                 <tr>
-                    <th scope="row" style="text-align: right;">Screenshot</th>
-                    <td>show png image here</td>
+                    <th scope="row" style="text-align: right;">
+                        <a href="#">Session ID</a>
+                    </th>
+                    <td>1CA23F6D20DDFF1AAF24A25074BB2692</td>
                 </tr>
                 <tr>
-
-                </tr>
+                    <th scope="row" style="text-align: right;">
+                        <a href="#">Screenshot</a>
+                    </th>
+                    <td>base64 image url</td>
+                </tr>                
             </tbody>
         </table>
     </div>
@@ -378,9 +369,33 @@
                     result = result[0];
                 }
 
-                document.getElementById('devtoolsFrontendUrl').value = result.devtoolsFrontendUrl; // anchor
+                document.getElementById('devtoolsFrontendUrl').value = result.devtoolsFrontendUrl;
+            } else if ( message.builtincmd == 'GetActiveTarget' ) {
+                let result = message.result;
+
+                let elem = document.getElementById("activetarget_sessionid");
+                elem.innerText = result['sessionid'];
+
+                elem = document.getElementById("activetarget_targetid");
+                elem.innerText = result['targetid'];
+
+                elem = document.getElementById("activetarget_url");
+                elem.innerText = result['url'];
+
+                elem = document.getElementById("activetarget_title");
+                elem.innerText = result['title'];
+
+                elem = document.getElementById("activetarget_screenshot");
+                elem.innerText = result['screenshot'];
+            } else if ( message.builtincmd == 'RefreshTargets' ) {
+                let result = message.result;
+
+                // iterate through list and update table accordingly
+                //targetsList, remove all tbody and reinsert
             }
+
         }
+
     </script>
     
 </body>
