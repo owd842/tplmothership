@@ -101,9 +101,7 @@
                     <td>1CA23F6D20DDFF1AAF24A25074BB2692</td>
                 </tr>
                 <tr>
-                    <th scope="row" style="text-align: right;">
-                        <a href="#">Session ID</a>
-                    </th>
+                    <th scope="row" style="text-align: right;">Session ID</th>
                     <td>1CA23F6D20DDFF1AAF24A25074BB2692</td>
                 </tr>
                 <tr>
@@ -390,43 +388,83 @@
             } else if ( message.builtincmd == 'RefreshTargets' ) {
                 let targets = message.result;
 
-                const table = document.getElementById("targetsList"); // anchor
+                const table = document.getElementById("targetsList");
                 const existingTbodys = table.querySelectorAll("tbody");
                 existingTbodys.forEach(tbody => tbody.remove());
+                
+                // Title, url, Target ID, Session ID, Screenshot
+                let items = [ 
+                    { key:'title', label: 'Title'}, 
+                    {key:'url', label:'URL'}, 
+                    {key:'targetId', label:'Target ID'}, 
+                    {key:'sessionId', label:'Session ID'}, 
+                    {key:'screenshot', label:'Screenshot'} 
+                ];
 
                 for ( let i = 0; i<targets.length; i++) {
                     let target = targets[i];
                     
-                    const tbody = document.createElement("tbody");
-
-                    const tr = document.createElement("tr");
-
-                    // Title, url, Target ID, Session ID, Screenshot
+                    let tbody = document.createElement("tbody");
                     
-                    let items = [ 'title', 'url', 'targetId', 'sessionID', 'screenshot' ];
-                    
-                    const th = document.createElement("th");
+                    items.forEach( item => {
+                        let tr = document.createElement("tr");
+
+                        let th = document.createElement("th");
+                        th.style.textAlign = "right";
+                        th.scope = "row"; 
+
+                        if ( item.key != 'screenshot' ) {
+                            th.textContent = item.label;
+                        } else {
+                            const a = document.createElement('a');
+                            a.href = '#';
+                            a.textContent = item.label;
+                            a.setAttribute('data-targetid', target['targetId']);
+
+                            a.onclick = function(event) {
+                                event.preventDefault();
+                                const targetid = this.dataset.targetid; 
+                                let payload = createBuiltInCmd('GetTargetScreenCapture');
+                                payload['targetId'] = targetid;
+                                sendMessage(payload);
+                            };
+
+                            th.appendChild(a);
+                        }
+                        
+                        tr.appendChild(th);
+
+                        let td = document.createElement("td");
+                        td.textContent = target[item.key];
+
+                        tr.appendChild(td);
+                        tbody.appendChild(tr);
+                    });
+
+                    let tr = document.createElement("tr");
+
+                    let th = document.createElement("th");
                     th.style.textAlign = "right";
                     th.scope = "row"; 
-                    th.textContent = "Title";
+                    th.textContent = '';
 
                     tr.appendChild(th);
 
-                    const td = document.createElement("td");
-                    td.textContent = target['title'];
+                    let td = document.createElement("td");
+                    td.textContent = '';
 
                     tr.appendChild(td);
 
                     tbody.appendChild(tr);
-                    
 
-
-                    table.appendChild(tbody);                    
+                    table.appendChild(tbody);
                 }
 
-                // iterate through list and update table accordingly
-                //targetsList, remove all tbody and reinsert
+            } else if ( message.builtincmd == 'GetTargetScreenCapture' ) {
+                let result = message.result;
+                console.log('pass');
             }
+
 
         }
 
