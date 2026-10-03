@@ -405,7 +405,9 @@
         }
 
         function sendMessage(payload) {
-            writeMessage(payload);
+            if ( payload.destination != 'BROADCAST' && payload.destination != 'client_pubnub.html' ) {
+                writeMessage(payload);
+            }
 
             pubnub.publish({
                 message: payload,
