@@ -95,14 +95,18 @@
 
     <div>
         <div>
-            <textarea class="code-input" placeholder="Type your code here..."></textarea>
+            <label for="cmdResult">Execution Result:</label><br/>
+            <textarea id="cmdResult" class="code-input" placeholder="Type your code here..."></textarea>
         </div>
 
         <table>
             <tr>
                 <td>Targets:</td>
                 <td>
-                    <select id="targetIdList" name="targetIdList" onchange="handleTargetIdChange(this);"> !!!
+                    <select id="targetIdList" name="targetIdList" onchange="handleTargetIdChange(this);">
+                        <option value="AAAAAAAAAAAA">AAAAAAAAAAAA</option>
+                        <option value="BBBBBBBBBBBB">BBBBBBBBBBBB</option>
+                        <option value="CCCCCCCCCCCC">CCCCCCCCCCCC</option>
                     </select>                  
                 </td>
             </tr>
@@ -111,7 +115,8 @@
                     Target ID:
                 </td>
                 <td>
-                    <input type="text" id="targetId">
+                    <input type="hidden" id="targetId" value="">
+                    <input type="text" id="targetIdText" onchange="handleTargetIdChange(this);">
                 </td>
             </tr>
             <tr>
@@ -122,14 +127,22 @@
                     <select id="cmdname" name="cmdname" onchange="handleCmdnameChange(this);">
                         <option value="GetTargetText">GetTargetText</option>
                         <option value="GetTargetHTML">GetTargetHTML</option>
+                        <option value="ExecEvaluate">ExecEvaluate</option>
                     </select>
                 </td>
             </tr>
             <tr>
-                <td><input type="button" value="Execute" onclick="executeTargetCmd();"></td>
+                <td colspan="2">
+                    <textarea id="evaluateCmd" class="code-input" placeholder="Type your code here..."></textarea>
+                </td>
+            </tr>
+            <tr>
+                <td style="text-align: right;"><input type="button" value="Execute" onclick="executeTargetCmd();"></td>
+                <td><input type="button" value="Clear" onclick="clearExecResult();"></td>
             </tr>
 
         </table>
+
     </div>
 
     <br/>
@@ -392,6 +405,7 @@
         }
 
         function sendMessage(payload) {
+            writeMessage(payload);
 
             pubnub.publish({
                 message: payload,
@@ -422,6 +436,10 @@
             if ( message.destination != 'client_pubnub.html' )
                 return;
             
+            if ( message.builtincmd == 'BROADCAST' ) {
+                return;
+            }
+
             if ( message.builtincmd == 'GetFrontendUrls' ) {
                 let result = message.result;
 
@@ -432,14 +450,20 @@
                 document.getElementById('devtoolsFrontendUrl').value = result.devtoolsFrontendUrl;
             } else if ( message.builtincmd == 'GetTargetScreenCapture' ) {
                 let result = message.result;
-                console.log('pass');
+                // pass
             } else if ( message.builtincmd == 'GetTargets' ) {
                 let targets = message.result;
-
                 refreshTargets(targets);
+
             } else if ( message.builtincmd == 'RefreshTargets' ) {
                 let targets = message.result;
                 refreshTargets(targets);
+
+            } else {
+                let result = message.result;
+
+                let elem = document.getElementById('cmdResult');
+                elem.value = result;
             }
 
 
@@ -548,17 +572,44 @@
     
     <script>
         function handleTargetIdChange(elem) {
-            console.log('handleTargetIdChange');
-            console.log(elem);
+            console.log('handleTargetIdChange: '+elem.value);
+            let telem = document.getElementById('targetId');
+            telem.value = elem.value;
+
+            telem = document.getElementById('targetIdText');
+            telem.value = elem.value;
         }
 
         function handleCmdnameChange(elem) {
-            console.log('handleCmdnameChange');
-            console.log(elem);
+            // console.log('handleCmdnameChange');
+            console.log('handleCmdnameChange: '+elem.value);
         }
 
         function executeTargetCmd() {
             console.log('executeTargetCmd');
+
+            let telem = document.getElementById('targetId');
+            let targetId = telem.value;
+            let cmdname = document.getElementById('cmdname').value;
+
+            let payload = createBuiltInCmd(cmdname);
+
+            let expression = document.getElementById('evaluateCmd').value;
+
+            if ( cmdname == 'ExecEvaluate' ) {
+                const bytes = new TextEncoder().encode(expression);
+                const binaryString = String.fromCodePoint(...bytes);
+                const base64String = btoa(binaryString);
+
+                payload['expression'] = base64String;
+            }
+
+            sendMessage(payload);
+        }
+
+        function clearExecResult() {
+            console.log('clearExecResult');
+            document.getElementById('cmdResult').value = '';
         }
     </script>
 </body>
