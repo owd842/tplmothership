@@ -1,3 +1,5 @@
+<!-- 20261003-1102 -->
+
 <!-- https://orgfarm-bd12a2161b-dev-ed.my.salesforce-sites.com/services/apexrest/StorageVault/pubnub_client -->
 <!-- https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault/client_pubnub -->
 <!DOCTYPE html>
@@ -33,6 +35,18 @@
             box-sizing: border-box; 
         }
 
+        .code-input {
+            /* Enforce monospace font */
+            font-family: 'Courier New', Courier, monospace;
+            
+            resize: both; 
+            
+            width: 400px;
+            height: 100px;
+            min-width: 50px;
+            min-height: 10px;
+          }
+          
     </style>
 
     <script src="https://cdn.pubnub.com/sdk/javascript/pubnub.12.0.3.min.js"></script>
@@ -80,7 +94,55 @@
     <br/>
 
     <div>
-        <a href="javascript:void(0);" onclick="sendMessage(createBuiltInCmd('RefreshTargets'));">Refresh Targets</a>
+        <div>
+            <textarea class="code-input" placeholder="Type your code here..."></textarea>
+        </div>
+
+        <table>
+            <tr>
+                <td>Targets:</td>
+                <td>
+                    <select id="targetIdList" name="targetIdList" onchange="handleTargetIdChange(this);"> !!!
+                    </select>                  
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    Target ID:
+                </td>
+                <td>
+                    <input type="text" id="targetId">
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    Command:
+                </td>
+                <td>
+                    <select id="cmdname" name="cmdname" onchange="handleCmdnameChange(this);">
+                        <option value="GetTargetText">GetTargetText</option>
+                        <option value="GetTargetHTML">GetTargetHTML</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td><input type="button" value="Execute" onclick="executeTargetCmd();"></td>
+            </tr>
+
+        </table>
+    </div>
+
+    <br/>
+    <br/>
+    
+    <div>
+        <table>
+            <tr>
+                <td><a href="javascript:void(0);" onclick="sendMessage(createBuiltInCmd('GetTargets'));">Get Targets</a></td>
+                <td>|</td>
+                <td><a href="javascript:void(0);" onclick="sendMessage(createBuiltInCmd('RefreshTargets'));">Refresh Targets</a></td>
+            </tr>
+        </table>
     </div>
 
     <br/>
@@ -206,8 +268,8 @@
 
 
         let pubnubconfig = {
-            publishKey: "pub-c-a00eaad9-c35e-4a41-bd62-cdc619a6f2cc",
-            subscribeKey: "sub-c-94ed1e1c-a765-4fd9-ba9e-f8ebbb47f5bd",
+            publishKey: "pub-c-bd83b994-1964-4760-9bf2-142ceadf7f66",
+            subscribeKey: "sub-c-62ba6c3d-b786-4be3-a033-e472ab227774",
             userId: "client_pubnub.html"
         };
 
@@ -337,7 +399,7 @@
             }, (status, response) => {
                 if (status.error) {
                     payload.error = status;
-                    LogMsg("Publish failed: " + status);
+                    LogMsg("Publish failed: " + status.toJSON());
                 } else {
                     payload.response = response;
                     LogMsg("Message published successfully with timetoken:" + response.timetoken);
@@ -368,108 +430,137 @@
                 }
 
                 document.getElementById('devtoolsFrontendUrl').value = result.devtoolsFrontendUrl;
-            } else if ( message.builtincmd == 'GetActiveTarget' ) {
-                let result = message.result;
-
-                let elem = document.getElementById("activetarget_sessionid");
-                elem.innerText = result['sessionid'];
-
-                elem = document.getElementById("activetarget_targetid");
-                elem.innerText = result['targetid'];
-
-                elem = document.getElementById("activetarget_url");
-                elem.innerText = result['url'];
-
-                elem = document.getElementById("activetarget_title");
-                elem.innerText = result['title'];
-
-                elem = document.getElementById("activetarget_screenshot");
-                elem.innerText = result['screenshot'];
-            } else if ( message.builtincmd == 'RefreshTargets' ) {
-                let targets = message.result;
-
-                const table = document.getElementById("targetsList");
-                const existingTbodys = table.querySelectorAll("tbody");
-                existingTbodys.forEach(tbody => tbody.remove());
-                
-                // Title, url, Target ID, Session ID, Screenshot
-                let items = [ 
-                    { key:'title', label: 'Title'}, 
-                    {key:'url', label:'URL'}, 
-                    {key:'targetId', label:'Target ID'}, 
-                    {key:'sessionId', label:'Session ID'}, 
-                    {key:'screenshot', label:'Screenshot'} 
-                ];
-
-                for ( let i = 0; i<targets.length; i++) {
-                    let target = targets[i];
-                    
-                    let tbody = document.createElement("tbody");
-                    
-                    items.forEach( item => {
-                        let tr = document.createElement("tr");
-
-                        let th = document.createElement("th");
-                        th.style.textAlign = "right";
-                        th.scope = "row"; 
-
-                        if ( item.key != 'screenshot' ) {
-                            th.textContent = item.label;
-                        } else {
-                            const a = document.createElement('a');
-                            a.href = '#';
-                            a.textContent = item.label;
-                            a.setAttribute('data-targetid', target['targetId']);
-
-                            a.onclick = function(event) {
-                                event.preventDefault();
-                                const targetid = this.dataset.targetid; 
-                                let payload = createBuiltInCmd('GetTargetScreenCapture');
-                                payload['targetId'] = targetid;
-                                sendMessage(payload);
-                            };
-
-                            th.appendChild(a);
-                        }
-                        
-                        tr.appendChild(th);
-
-                        let td = document.createElement("td");
-                        td.textContent = target[item.key];
-
-                        tr.appendChild(td);
-                        tbody.appendChild(tr);
-                    });
-
-                    let tr = document.createElement("tr");
-
-                    let th = document.createElement("th");
-                    th.style.textAlign = "right";
-                    th.scope = "row"; 
-                    th.textContent = '';
-
-                    tr.appendChild(th);
-
-                    let td = document.createElement("td");
-                    td.textContent = '';
-
-                    tr.appendChild(td);
-
-                    tbody.appendChild(tr);
-
-                    table.appendChild(tbody);
-                }
-
             } else if ( message.builtincmd == 'GetTargetScreenCapture' ) {
                 let result = message.result;
                 console.log('pass');
+            } else if ( message.builtincmd == 'GetTargets' ) {
+                let targets = message.result;
+
+                refreshTargets(targets);
+            } else if ( message.builtincmd == 'RefreshTargets' ) {
+                let targets = message.result;
+                refreshTargets(targets);
             }
 
 
         }
 
+        function refreshTargets(targets) {
+            refreshTargetsTable(targets);
+            refreshTargetIdList(targets);
+        }
+
+        function refreshTargetsTable(targets) {
+            LogMsg('refreshTargetsTable');
+
+            const table = document.getElementById("targetsList");
+            const existingTbodys = table.querySelectorAll("tbody");
+            existingTbodys.forEach(tbody => tbody.remove());
+            
+            // Title, url, Target ID, Session ID, Screenshot
+            let items = [ 
+                { key:'title', label: 'Title'}, 
+                {key:'url', label:'URL'}, 
+                {key:'targetId', label:'Target ID'}, 
+                {key:'sessionId', label:'Session ID'}, 
+                {key:'screenshot', label:'Screenshot'} 
+            ];
+
+            for ( let i = 0; i<targets.length; i++) {
+                let target = targets[i];
+                
+                let tbody = document.createElement("tbody");
+                
+                items.forEach( item => {
+                    let tr = document.createElement("tr");
+
+                    let th = document.createElement("th");
+                    th.style.textAlign = "right";
+                    th.scope = "row"; 
+
+                    if ( item.key != 'screenshot' ) {
+                        th.textContent = item.label;
+                    } else {
+                        const a = document.createElement('a');
+                        a.href = '#';
+                        a.textContent = item.label;
+                        a.setAttribute('data-targetid', target['targetId']);
+
+                        a.onclick = function(event) {
+                            event.preventDefault();
+                            const targetid = this.dataset.targetid; 
+                            let payload = createBuiltInCmd('GetTargetScreenCapture');
+                            payload['targetId'] = targetid;
+                            sendMessage(payload);
+                        };
+
+                        th.appendChild(a);
+                    }
+                    
+                    tr.appendChild(th);
+
+                    let td = document.createElement("td");
+                    td.textContent = target[item.key];
+
+                    tr.appendChild(td);
+                    tbody.appendChild(tr);
+                });
+
+                let tr = document.createElement("tr");
+
+                let th = document.createElement("th");
+                th.style.textAlign = "right";
+                th.scope = "row"; 
+                th.textContent = '';
+
+                tr.appendChild(th);
+
+                let td = document.createElement("td");
+                td.textContent = '';
+
+                tr.appendChild(td);
+
+                tbody.appendChild(tr);
+
+                table.appendChild(tbody);
+            }
+
+        }
+
+        function refreshTargetIdList(targets) {
+            console.log('refreshTargetIdList');
+
+            let dropdown = document.getElementById('targetIdList');
+            dropdown.options.length = 0;
+
+            targets.forEach( target => {
+                console.log(target);
+
+                const newOption = document.createElement("option");
+
+                newOption.text = target.targetId;
+                newOption.value = target.targetId;
+              
+                dropdown.add(newOption);    
+            });
+        }
     </script>
     
+    <script>
+        function handleTargetIdChange(elem) {
+            console.log('handleTargetIdChange');
+            console.log(elem);
+        }
+
+        function handleCmdnameChange(elem) {
+            console.log('handleCmdnameChange');
+            console.log(elem);
+        }
+
+        function executeTargetCmd() {
+            console.log('executeTargetCmd');
+        }
+    </script>
 </body>
 
 </html>
