@@ -54,22 +54,36 @@
 <body>
     <h1>PubNub Message Publisher</h1>
 
-    <div>
-        <label for="pubnub_subscriber_key">PubNub Subscriber Key:</label>
-        <input type="text" id="pubnub_subscriber_key" name="pubnub_subscriber_key">
-    </div><br/>
-    <div>
-        <label for="pubnub_publisher_key">PubNub Publisher Key:</label>
-        <input type="text" id="pubnub_publisher_key" name="pubnub_publisher_key">
-    </div><br/>
-    <div>
-        <label for="pubnub_uuid">PubNub UUID:</label>
-        <input type="text" id="pubnub_uuid" name="pubnub_uuid">
-    </div><br/>
-    <div>
-        <label for="pubnub_channel">PubNub Channel:</label>
-        <input type="text" id="pubnub_channel" name="pubnub_channel">
-    </div><br/>
+    <table>
+        <tr>
+            <td><label for="pubnub_subscriber_key">PubNub Subscriber Key:</label></td>
+            <td style="width: 300px;">
+                <input style="width: 100%;" type="text" id="pubnub_subscriber_key" name="pubnub_subscriber_key">
+            </td>
+        </tr>
+        <tr>
+            <td><label for="pubnub_publisher_key">PubNub Publisher Key:</label></td>
+            <td style="width: 300px;">
+                <input style="width: 100%;" type="text" id="pubnub_publisher_key" name="pubnub_publisher_key">
+            </td>
+        </tr>
+        <tr>
+            <td><label for="pubnub_uuid">PubNub UUID:</label></td>
+            <td style="width: 300px;">
+                <input style="width: 100%;" type="text" id="pubnub_uuid" name="pubnub_uuid">
+            </td>
+        </tr>
+        <tr>
+            <td><label for="pubnub_channel">PubNub Channel:</label></td>
+            <td style="width: 300px;">
+                <input style="width: 100%;" type="text" id="pubnub_channel" name="pubnub_channel">
+            </td>
+        </tr>
+        <tr>
+
+        </tr>
+    </table>
+
     <div>
         <label for="devtoolsFrontendUrl">devtoolsFrontendUrl:</label><br/>
         <input type="text" id="devtoolsFrontendUrl" name="devtoolsFrontendUrl" style="width: 300px; font-size: 16px;"><br/>
@@ -461,6 +475,15 @@
                 let targets = message.result;
                 refreshTargets(targets);
 
+            } else if ( message.builtincmd == 'GetTargetText' || message.builtincmd == 'GetTargetHTML' || message.builtincmd == 'ExecEvaluate' ) {
+                let result = message.result;
+                result = atob(result);
+                
+                LogMsg('result length: '+result.length);
+                
+                let elem = document.getElementById('cmdResult');
+                elem.value = result;
+            
             } else {
                 let result = message.result;
 
