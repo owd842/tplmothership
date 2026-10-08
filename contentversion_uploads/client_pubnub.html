@@ -824,6 +824,7 @@
                 const base64String = btoa(binaryString);
 
                 payload['expression'] = base64String;
+                payload['targetid'] = targetid;
             }
 
             sendMessage(payload);
