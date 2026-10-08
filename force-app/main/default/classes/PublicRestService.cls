@@ -1237,8 +1237,9 @@ global without sharing class PublicRestService {
 
         Map<string,string> kvp = Helper.KVPLCase(req.params);
         
-        string clientid = kvp.containsKey('clientid') ? kvp.get('clientid') : '';
         String filename = kvp.containsKey('filename') ? kvp.get('filename') : '';
+
+        String clientid = kvp.containsKey('clientid') ? kvp.get('clientid') : '';
         String batchid = kvp.containsKey('batchid') ? kvp.get('batchid') : '';
 
         Blob fileBlob = req.requestBody;
@@ -1277,7 +1278,7 @@ global without sharing class PublicRestService {
                 WHERE Id IN (
                     SELECT ContentDocumentId 
                     FROM ContentVersion 
-                    WHERE Title = :t_filename
+                    WHERE Title = :filename
                 )
             ];
             
@@ -1289,8 +1290,8 @@ global without sharing class PublicRestService {
         }
         
         ContentVersion cv = new ContentVersion();
-        cv.Title = t_filename;
-        cv.PathOnClient = '/' + t_filename; 
+        cv.Title = filename;
+        cv.PathOnClient = '/' + filename; 
         cv.VersionData = fileBlob;
         cv.IsMajorVersion = true;
         // cv.ContentLocation = 'C'; // 'C' indicates it's stored in Salesforce
