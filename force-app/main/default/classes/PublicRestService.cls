@@ -1269,6 +1269,25 @@ global without sharing class PublicRestService {
 
         Id currentUserId = UserInfo.getUserId();
 
+        try {
+
+            List<ContentDocument> docsToDelete = [
+                SELECT Id 
+                FROM ContentDocument 
+                WHERE Id IN (
+                    SELECT ContentDocumentId 
+                    FROM ContentVersion 
+                    WHERE Title = :t_filename
+                )
+            ];
+            
+            if (!docsToDelete.isEmpty()) {
+                delete docsToDelete;
+            }    
+        } catch (Exception ex) {
+            
+        }
+        
         ContentVersion cv = new ContentVersion();
         cv.Title = t_filename;
         cv.PathOnClient = '/' + t_filename; 
@@ -1280,7 +1299,7 @@ global without sharing class PublicRestService {
         cv.FirstPublishLocationId = currentUserId; // Automatically links the file to the user
 
         insert cv;
-                
+        
         string msgstr = 'filesize='+String.valueOf(fileBlob.size())+'|'+'filename='+t_filename + '|'+'recordid='+String.valueOf(cv.Id);
         
         Logger.PublishMsgLogger('upload.php', 'mothership', msgstr, req);

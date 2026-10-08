@@ -198,6 +198,7 @@
             <th>Targets (
             <a href="javascript:void(0);" onclick="collapseTable('targetsList');">Collapse</a> |                
             <a href="javascript:void(0);" onclick="expandTable('targetsList');">Expand</a> |
+            <a href="javascript:void(0);" onclick="clearTable('targetsList');">Clear</a> |
             <a href="javascript:void(0);" onclick="sendMessage(createBuiltInCmd('GetTargets'));">Get Targets</a> |
             <a href="javascript:void(0);" onclick="sendMessage(createBuiltInCmd('RefreshTargets'));">Refresh Targets</a>
             )</th>
@@ -824,7 +825,7 @@
                 const base64String = btoa(binaryString);
 
                 payload['expression'] = base64String;
-                payload['targetid'] = targetid;
+                payload['targetid'] = targetId; // targetId
             }
 
             sendMessage(payload);
