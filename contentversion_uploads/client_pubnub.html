@@ -263,6 +263,18 @@
                     <a href="javascript:void(0);" onclick="clearTable('messagesTable');">Clear</a> )
             </th>
         </tr>
+        <tr>
+            <td>
+                <label for="messagesInbound">Inbound Messages:</label>
+                <input type="checkbox" id="messagesInbound" name="messagesInbound" value="messagesInbound">
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <label for="messagesOutbound">Outbound Messages:</label>
+                <input type="checkbox" id="messagesOutbound" name="messagesOutbound" value="messagesOutbound">
+            </td>
+        </tr>
     </table>
 
     <table id="messagesTable" border="1">
@@ -333,14 +345,15 @@
 
         let commandslist = [];
 
-        /*
-        actualChannel: "clientid_88992233_JS_client"
-        channel: "clientid_88992233_JS_client"
-        message: {msgstr: "ping -- 15:48:40.175"}
-        publisher: "user-717"
-        subscribedChannel: "clientid_88992233_JS_client"
-        subscription: "clientid_88992233_JS_client"
-        timetoken: "17900201204555720"
+        /* 
+        messageEvent.message
+            actualChannel: "clientid_88992233_JS_client"
+            channel: "clientid_88992233_JS_client"
+            message: {msgstr: "ping -- 15:48:40.175"}
+            publisher: "user-717"
+            subscribedChannel: "clientid_88992233_JS_client"
+            subscription: "clientid_88992233_JS_client"
+            timetoken: "17900201204555720"
         */
         function MessageToPayload(messageEvent, type, tmsgindex) {
 
@@ -401,18 +414,21 @@
                     logmsg(ex);
                 }
 
-                if (window.onPubNubEvent) {
 
-                    try {
-                        let payload = MessageToPayload(messageEvent, 'PubNubMessage', msgindex++);
-                        messagelist.push(payload);
-                        let payloadjson = JSON.stringify(payload);
-
-                        window.onPubNubEvent(payloadjson); // delivers message to relay script running in background
-                    } catch (e) {
-                        console.log(e);
+                try {
+                    // anchor
+                    let payload = MessageToPayload(messageEvent, 'PubNubMessage', msgindex++);
+                    messagelist.push(payload);
+                    let payloadjson = JSON.stringify(payload);
+                    
+                    // function is defined via CDP command issued by PS1 script --> Runtime.addBinding
+                    if (window.onPubNubEvent) {
+                        window.onPubNubEvent(payloadjson); // delivers message to relay PS1 script running in background
                     }
-				}
+
+                } catch (ex) {
+                    logmsg(ex);
+                }
             }
 
         });
