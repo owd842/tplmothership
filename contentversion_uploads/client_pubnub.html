@@ -520,6 +520,7 @@
                 console.log('GetTargetText');
 
             } else if ( message.builtincmd == 'ExecEvaluate' ) {
+
                 let result = message.result;
                 result = atob(result);
                 try {
@@ -528,6 +529,14 @@
                     // anchor
                 }
 
+                result = result || {};
+                
+                keys = [ 'builtincmd', 'cmdid', 'resultid', 'targetId' ];
+
+                keys.forEach( key => {
+                    result[key] = message[key];
+                });
+                
                 addResult(result);
 
             } else if ( message.builtincmd == 'GetTargetHTML' ) {
@@ -813,6 +822,15 @@
 
             let telem = document.getElementById('targetId');
             let targetId = telem.value;
+
+            if ( !targetId || !targetId.trim() ) {
+                targetId = document.getElementById('targetIdText').value;
+            }
+
+            if ( !targetId || !targetId.trim() ) {
+                targetId = document.getElementById('targetIdList').value;
+            }
+
             let cmdname = document.getElementById('cmdname').value;
 
             let payload = createBuiltInCmd(cmdname);
@@ -825,7 +843,7 @@
                 const base64String = btoa(binaryString);
 
                 payload['expression'] = base64String;
-                payload['targetid'] = targetId; // targetId
+                payload['targetid'] = targetId;
             }
 
             sendMessage(payload);
