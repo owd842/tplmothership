@@ -1,4 +1,4 @@
-<!-- 20261007-1200 -->
+<!-- 20261009-1945 -->
 
 <!-- https://orgfarm-bd12a2161b-dev-ed.my.salesforce-sites.com/services/apexrest/StorageVault/pubnub_client -->
 <!-- https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault/client_pubnub -->
@@ -264,15 +264,15 @@
             </th>
         </tr>
         <tr>
-            <td>
+            <td> <!-- anchor -->
                 <label for="messagesInbound">Inbound Messages:</label>
-                <input type="checkbox" id="messagesInbound" name="messagesInbound" value="messagesInbound">
+                <input type="checkbox" id="messagesInbound" name="messagesInbound" value="messagesInbound" onchange="toggleInboundMessages(this);">
             </td>
         </tr>
         <tr>
             <td>
                 <label for="messagesOutbound">Outbound Messages:</label>
-                <input type="checkbox" id="messagesOutbound" name="messagesOutbound" value="messagesOutbound">
+                <input type="checkbox" id="messagesOutbound" name="messagesOutbound" value="messagesOutbound" onchange=toggleOutboundMessages(this)"">
             </td>
         </tr>
     </table>
@@ -336,6 +336,8 @@
                 // discard exception
             }
         }
+
+        var logmsg = LogMsg;
     </script>
 
     <script>
@@ -389,11 +391,11 @@
 
                         window.onPubNubEvent(JSON.stringify(payload));
                     } catch (e) {
-                        console.log(e);
+                        logmsg(e);
                     }				}
 			
                 if (statusEvent.category === "PNConnectedCategory") {
-                    console.log("PubNub Status Notification -- Successfully connected locally!");
+                    logmsg("PubNub Status Notification -- Successfully connected locally!");
                 }
             },
             
@@ -410,15 +412,11 @@
                 try {
                     addMessage(messageEvent);
                     processMessage(messageEvent);
-                } catch (ex) {
-                    logmsg(ex);
-                }
 
-
-                try {
-                    // anchor
                     let payload = MessageToPayload(messageEvent, 'PubNubMessage', msgindex++);
+
                     messagelist.push(payload);
+
                     let payloadjson = JSON.stringify(payload);
                     
                     // function is defined via CDP command issued by PS1 script --> Runtime.addBinding
@@ -542,7 +540,7 @@
                 try {
                     result = JSON.parse(result);
                 } catch (ex) {
-                    // anchor
+                    
                 }
 
                 result = result || {};
@@ -587,6 +585,21 @@
             const relativeUrl = urlObj.pathname + urlObj.search + urlObj.hash;
 
             document.getElementById('processCDPUrl').value = 'https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault/processcdp'+relativeUrl;
+        }
+
+        function refreshMessages(messages, inbound, outbound) {
+            
+            if ( ! messages || messages.length == 0 ) {
+                throw "messages list empty or null"
+            }
+
+            clearTable('messagesTable');
+
+            for ( let i = 0; i<messages.length; i++) {
+                let msg = messages[i];
+
+                addMessage(msg);
+            }
         }
 
         function addMessage(message) {
