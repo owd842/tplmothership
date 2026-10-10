@@ -1,3 +1,5 @@
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+
 $cwd = Split-Path -Path $psEditor.GetEditorContext().CurrentFile.Path   
 Write-Information $cwd
 
