@@ -593,7 +593,7 @@
             document.getElementById('processCDPUrl').value = 'https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault/processcdp'+relativeUrl;
         }
 
-        function refreshMessages(messages, inbound, outbound) {
+        function refreshMessages(messages, inbound, outbound, broadcast) {
             
             if ( ! messages || messages.length == 0 ) {
                 throw "messages list empty or null"
@@ -604,8 +604,20 @@
             for ( let i = 0; i<messages.length; i++) {
                 let msg = messages[i];
 
-                if ( inbound && msg.message.destination == 'BROADCAST' )
-                addMessage(msg);
+                let addmsg = false;
+
+                if ( broadcast && msg.message.destination == 'BROADCAST' ) {
+                    addmsg = true;
+                } else if ( inbound && msg.message.destination == 'client_pubnub.html' ) {
+                    addmsg = true;
+                } else if ( outbound && msg.message.source == 'client_pubnub.html' ) {
+                    addmsg = true;
+                }
+
+                if ( addmsg ) {
+                    addMessage(msg);
+                }
+
             }
         }
 
@@ -846,6 +858,9 @@
 
             telem = document.getElementById('targetIdText');
             telem.value = elem.value;
+
+            telem = document.getElementById('targetIdList');
+            telem.value = elem.value;
         }
 
         function handleCmdnameChange(elem) {
@@ -958,9 +973,10 @@
 
         function toggleMessages() {
             let inbound = document.getElementById('messagesInbound'); // anchor
-            let outbound = document.getElementById('messagesOutbound'); // anchor
+            let outbound = document.getElementById('messagesOutbound'); 
+            let broadcast = document.getElementById('messagesBroadcast'); 
 
-            refreshMessages(messagelist, inbound.checked, outbound.checked)
+            refreshMessages(messagelist, inbound.checked, outbound.checked, broadcast.checked)
         }
 
     </script>
