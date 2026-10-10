@@ -266,15 +266,21 @@
         <tr>
             <td> <!-- anchor -->
                 <label for="messagesInbound">Inbound Messages:</label>
-                <input type="checkbox" id="messagesInbound" name="messagesInbound" value="messagesInbound" onchange="toggleInboundMessages(this);">
+                <input type="checkbox" id="messagesInbound" name="messagesInbound" value="messagesInbound" onchange="toggleMessages();">
             </td>
         </tr>
         <tr>
             <td>
                 <label for="messagesOutbound">Outbound Messages:</label>
-                <input type="checkbox" id="messagesOutbound" name="messagesOutbound" value="messagesOutbound" onchange=toggleOutboundMessages(this)"">
+                <input type="checkbox" id="messagesOutbound" name="messagesOutbound" value="messagesOutbound" onchange="toggleMessages();">
             </td>
         </tr>
+        <tr>
+            <td>
+                <label for="messagesBroadcast">Broadcast Messages:</label>
+                <input type="checkbox" id="messagesBroadcast" name="messagesBroadcast" value="messagesBroadcast" onchange="toggleMessages();">
+            </td>
+        </tr>        
     </table>
 
     <table id="messagesTable" border="1">
@@ -322,7 +328,7 @@
             try {
                 msgstr = '';
 
-                if ( msg instanceof Error || Error.isError(msg) ) {
+                if ( msg instanceof Error ) {
                     msgstr = ErrorToJson(msg);
                 } else if ( typeof msg === 'string' || msg instanceof String ) {
                     msgstr = msg;
@@ -598,6 +604,7 @@
             for ( let i = 0; i<messages.length; i++) {
                 let msg = messages[i];
 
+                if ( inbound && msg.message.destination == 'BROADCAST' )
                 addMessage(msg);
             }
         }
@@ -804,7 +811,7 @@
         function refreshCommandsTable(commands) {
             LogMsg('refreshCommandsTable');
 
-            const table = document.getElementById("commandsList"); // anchor
+            const table = document.getElementById("commandsList");
             const existingTbodys = table.querySelectorAll("tbody");
             existingTbodys.forEach(tbody => tbody.remove());
             
@@ -879,7 +886,7 @@
         }
 
         function addResult(result) {
-            const table = document.getElementById("resultsList"); // anchor
+            const table = document.getElementById("resultsList");
             const tbody = table.createTBody();
 
             let insertrow = (key, item, bgcolor) => {
@@ -947,6 +954,13 @@
             const table = document.getElementById(tableid);
 
             table.querySelectorAll('tbody').forEach(tbody => tbody.remove());
+        }
+
+        function toggleMessages() {
+            let inbound = document.getElementById('messagesInbound'); // anchor
+            let outbound = document.getElementById('messagesOutbound'); // anchor
+
+            refreshMessages(messagelist, inbound.checked, outbound.checked)
         }
 
     </script>
