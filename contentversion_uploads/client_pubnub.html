@@ -1,4 +1,4 @@
-<!-- 20261009-1945 -->
+<!-- 20261011-1134 -->
 
 <!-- https://orgfarm-bd12a2161b-dev-ed.my.salesforce-sites.com/services/apexrest/StorageVault/pubnub_client -->
 <!-- https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault/client_pubnub -->
@@ -95,6 +95,7 @@
         <button onclick="navigateDebug();">Navigate</button>
     </div><br/>
 
+    <!-- message body -->
     <div>
         <table>
             <tr>
@@ -127,6 +128,7 @@
     <br/>
     <br/>
 
+    <!-- issue CDP commands to target  -->
     <div>
         <table>
             <tr>
@@ -149,6 +151,21 @@
                 </td>
             </tr>
             <tr>
+                <td>Session ID:</td>
+                <td id="targetSessionId">
+                </td>
+            </tr>
+            <tr>
+                <td>Title:</td>
+                <td id="targetTitle">
+                </td>
+            </tr>
+            <tr>
+                <td>URL:</td>
+                <td id="targetURL">
+                </td>
+            </tr>
+            <tr>
                 <td>
                     Command:
                 </td>
@@ -166,11 +183,15 @@
                     <textarea id="evaluateCmd" class="code-input" placeholder="Type your code here..."></textarea>
                 </td>
             </tr>
+        </table>
+        <table>
             <tr>
                 <td style="text-align: right;"><input type="button" value="Execute" onclick="executeTargetCmd();"></td>
                 <td><input type="button" value="Clear" onclick="clearExecResult();"></td>
+                <td>
+                    <input type="button" value="GetBoundingRect" onclick="insertJSCode('GetBoundingRect');">
+                </td>
             </tr>
-
         </table>
 
     </div>
@@ -178,6 +199,7 @@
     <br/>
     <br/>
     
+    <!-- results -->
     <table border="1">
         <tr>
             <th>Results (
@@ -265,7 +287,7 @@
             </th>
         </tr>
         <tr>
-            <td> <!-- anchor -->
+            <td>
                 <label for="messagesInbound">Inbound Messages:</label>
                 <input type="checkbox" id="messagesInbound" name="messagesInbound" value="messagesInbound" onchange="toggleMessages();">
             </td>
@@ -289,6 +311,7 @@
         </tr>
     </table>
 
+    <!-- logger + utility funcs -->
     <script>
         if ( ! Object.hasOwn ) {
 			Object.hasOwn = (obj, prop) => Object.prototype.hasOwnProperty.call(obj, prop);
@@ -345,16 +368,8 @@
         }
 
         var logmsg = LogMsg;
-    </script>
 
-    <script>
-
-        let msgindex = 1;
-        let messagelist = [];
-
-        let commandslist = [];
-
-        /* 
+                /* 
         messageEvent.message
             actualChannel: "clientid_88992233_JS_client"
             channel: "clientid_88992233_JS_client"
@@ -377,7 +392,28 @@
 
             return payload;
         }
+    </script>
 
+    <!-- globals + pubnub -->
+    <script>
+
+        let jscodelist = {
+            "GetBoundingRect":`(() => {
+
+                let coords = elem.getBoundingClientRect()
+                let x_pos = (coords.left + coords.right) / 2;
+                let y_pos = (coords.top + coords.bottom) / 2;
+                
+                return { "x_pos":x_pos, "y_pos":y_pos };
+                
+                })();`
+        };
+
+        let msgindex = 1;
+        let messagelist = [];
+
+        let commandslist = [];
+        let targetslist = [];
 
         let pubnubconfig = {
             publishKey: "pub-c-bd83b994-1964-4760-9bf2-142ceadf7f66",
@@ -441,9 +477,7 @@
         pubnub.subscribe({
             channels: [client_channel]
         });        
-    </script>
-    
-    <script>
+
         try {
             let elem = null;
             elem = document.getElementById('pubnub_channel');
@@ -462,6 +496,7 @@
         }
     </script>
 
+    <!-- inbound/outbound messaging -->
     <script>
         
         function createBuiltInCmd(cmdname) {
@@ -530,6 +565,7 @@
             } else if ( message.builtincmd == 'GetTargets' ) {
                 let targets = message.result;
                 refreshTargets(targets);
+                targetslist = targets;
 
             } else if ( message.builtincmd == 'RefreshTargets' ) {
                 let targets = message.result;
@@ -839,6 +875,9 @@
 
         function handleTargetIdChange(elem) {
             console.log('handleTargetIdChange: '+elem.value);
+
+            let targetid = elem.value;
+
             let telem = document.getElementById('targetId');
             telem.value = elem.value;
 
@@ -847,6 +886,25 @@
 
             telem = document.getElementById('targetIdList');
             telem.value = elem.value;
+
+            // anchor
+
+            let target = targetslist.find(target => {
+                return target.targetId == targetid; 
+            });
+
+            let sessionid = target.sessionId;
+            let title = target.title;
+            let url = target.url;
+
+            telem = document.getElementById('targetSessionId');
+            telem.innerText = sessionid;
+
+            telem = document.getElementById('targetTitle');
+            telem.innerText = title;
+
+            telem = document.getElementById('targetURL');
+            telem.innerText = url;
         }
 
         function handleCmdnameChange(elem) {
@@ -959,11 +1017,18 @@
         }
 
         function toggleMessages() {
-            let inbound = document.getElementById('messagesInbound'); // anchor
+            let inbound = document.getElementById('messagesInbound');
             let outbound = document.getElementById('messagesOutbound'); 
             let broadcast = document.getElementById('messagesBroadcast'); 
 
             refreshMessages(messagelist, inbound.checked, outbound.checked, broadcast.checked)
+        }
+
+        function insertJSCode(jscodename) {
+            let jscodestr = jscodelist[jscodename];
+
+            let elem = document.getElementById('evaluateCmd');
+            elem.value = jscodestr;
         }
 
     </script>
