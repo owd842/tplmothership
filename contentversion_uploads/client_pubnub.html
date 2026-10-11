@@ -701,7 +701,6 @@
                 {key:'url', label:'URL'}, 
                 {key:'targetId', label:'Target ID'}, 
                 {key:'sessionId', label:'Session ID'}, 
-                {key:'screenshot', label:'Screenshot'} 
             ];
 
             for ( let i = 0; i<targets.length; i++) {
@@ -716,24 +715,7 @@
                     th.style.textAlign = "right";
                     th.scope = "row"; 
 
-                    if ( item.key != 'screenshot' ) {
-                        th.textContent = item.label;
-                    } else {
-                        const a = document.createElement('a');
-                        a.href = '#';
-                        a.textContent = item.label;
-                        a.setAttribute('data-targetid', target['targetId']);
-
-                        a.onclick = function(event) {
-                            event.preventDefault();
-                            const targetid = this.dataset.targetid; 
-                            let payload = createBuiltInCmd('GetTargetScreenCapture');
-                            payload['targetId'] = targetid;
-                            sendMessage(payload);
-                        };
-
-                        th.appendChild(a);
-                    }
+                    th.textContent = item.label;
                     
                     tr.appendChild(th);
 
@@ -749,17 +731,20 @@
                 let th = document.createElement("th");
                 th.style.textAlign = "right";
                 th.scope = "row"; 
-                th.textContent = '';
+                th.colSpan = 2;
+                th.textContent = '[---------]';
 
                 tr.appendChild(th);
 
-                let td = document.createElement("td");
-                td.textContent = '';
-
-                tr.appendChild(td);
+                // let td = document.createElement("td");
+                // td.textContent = '[----------]';
+                // tr.appendChild(td);
 
                 tbody.appendChild(tr);
 
+                tbody.style.border = '1px solid black';
+                tbody.style.borderCollapse = 'collapse';
+                
                 table.appendChild(tbody);
             }
 
@@ -887,6 +872,8 @@
 
             let payload = createBuiltInCmd(cmdname);
 
+            payload['targetid'] = targetId;
+
             let expression = document.getElementById('evaluateCmd').value;
 
             if ( cmdname == 'ExecEvaluate' ) {
@@ -895,7 +882,6 @@
                 const base64String = btoa(binaryString);
 
                 payload['expression'] = base64String;
-                payload['targetid'] = targetId;
             }
 
             sendMessage(payload);
