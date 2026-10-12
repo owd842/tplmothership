@@ -707,7 +707,7 @@
         function addTarget(target) {
 
             const table = document.getElementById("targetsList");
-            let tbody = document.createElement("tbody");
+            const tbody = table.createTBody();
 
             let insertrow = (key, item) => {
                 let newRow = tbody.insertRow(-1);
