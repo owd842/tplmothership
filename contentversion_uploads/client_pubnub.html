@@ -1,4 +1,4 @@
-<!-- 20261012-09434 -->
+<!-- 20261013-1058 -->
 
 <!-- https://orgfarm-bd12a2161b-dev-ed.my.salesforce-sites.com/services/apexrest/StorageVault/pubnub_client -->
 <!-- https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault/client_pubnub -->
@@ -192,10 +192,26 @@
                 <td>
                     <input type="button" value="GetBoundingRect" onclick="insertJSCode('GetBoundingRect');">
                 </td>
+                <td>
+                    <input type="button" value="RefreshDOM" onclick="refreshDOM();">
+                </td>
             </tr>
         </table>
 
     </div>
+
+    <br/>
+
+    <!-- DOM explorer -->
+    <table border="1">
+        <tr>
+            <th>DOM (
+            <a href="javascript:void(0);" onclick="collapseTable('resultsList');">Collapse</a> |                
+            <a href="javascript:void(0);" onclick="expandTable('resultsList');">Expand</a> |
+            <a href="javascript:void(0);" onclick="clearTable('resultsList');">Clear</a> )</th>
+        </tr>
+    </table>
+
 
     <br/>
     <br/>
