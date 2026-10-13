@@ -615,8 +615,68 @@
 
     </script>
 
+    <!-- commands logic -->
+    <script>
+        function executeTargetCmd() {
+            console.log('executeTargetCmd');
+
+            let targetId = getTargetId();
+
+            let cmdname = document.getElementById('cmdname').value;
+
+            let payload = createBuiltInCmd(cmdname);
+
+            payload['targetid'] = targetId;
+
+            let expression = document.getElementById('evaluateCmd').value;
+
+            if ( cmdname == 'ExecEvaluate' ) {
+                const bytes = new TextEncoder().encode(expression);
+                const binaryString = String.fromCodePoint(...bytes);
+                const base64String = btoa(binaryString);
+
+                payload['expression'] = base64String;
+            }
+
+            sendMessage(payload);
+        }
+
+        function refreshDOM() {
+            let targetId = getTargetId();
+
+            let payload = createBuiltInCmd('RefreshDOM');
+            payload['targetid'] = targetId;
+
+            sendMessage(payload);
+        }
+
+    </script>
+
     <!-- populate/refresh/update ui -->
     <script>
+        function updateTargetId() {
+            let targetId = getTargetId()
+
+            document.getElementById('targetId').value = targetId;
+            document.getElementById('targetIdList').value = targetId;
+            document.getElementById('targetIdText').value = targetId;
+        }
+
+        function getTargetId() {
+            let telem = document.getElementById('targetId');
+            let targetId = telem.value;
+
+            if ( !targetId || !targetId.trim() ) {
+                targetId = document.getElementById('targetIdText').value;
+            }
+
+            if ( !targetId || !targetId.trim() ) {
+                targetId = document.getElementById('targetIdList').value;
+            }
+
+            return targetId;
+        }
+
         function navigateDebug() {
             let elem = document.getElementById('devtoolsFrontendUrl');
             let fullUrl = elem.value;
@@ -918,39 +978,6 @@
         function handleCmdnameChange(elem) {
             // console.log('handleCmdnameChange');
             console.log('handleCmdnameChange: '+elem.value);
-        }
-
-        function executeTargetCmd() {
-            console.log('executeTargetCmd');
-
-            let telem = document.getElementById('targetId');
-            let targetId = telem.value;
-
-            if ( !targetId || !targetId.trim() ) {
-                targetId = document.getElementById('targetIdText').value;
-            }
-
-            if ( !targetId || !targetId.trim() ) {
-                targetId = document.getElementById('targetIdList').value;
-            }
-
-            let cmdname = document.getElementById('cmdname').value;
-
-            let payload = createBuiltInCmd(cmdname);
-
-            payload['targetid'] = targetId;
-
-            let expression = document.getElementById('evaluateCmd').value;
-
-            if ( cmdname == 'ExecEvaluate' ) {
-                const bytes = new TextEncoder().encode(expression);
-                const binaryString = String.fromCodePoint(...bytes);
-                const base64String = btoa(binaryString);
-
-                payload['expression'] = base64String;
-            }
-
-            sendMessage(payload);
         }
 
         function addResult(result) {
