@@ -176,6 +176,7 @@
                         <option value="GetTargetHTML">GetTargetHTML</option>
                         <option value="GetTargetScreenCapture">GetTargetScreenCapture</option>
                         <option value="LoadQueue">LoadQueue</option>
+                        <option value="RefreshDOM">RefreshDOM</option>
                     </select>
                 </td>
             </tr>
@@ -188,12 +189,9 @@
         <table>
             <tr>
                 <td style="text-align: right;"><input type="button" value="Execute" onclick="executeTargetCmd();"></td>
-                <td><input type="button" value="Clear" onclick="clearExecResult();"></td>
+                <td><input type="button" value="Clear" onclick="document.getElementById('evaluateCmd').value='';"></td>
                 <td>
                     <input type="button" value="GetBoundingRect" onclick="insertJSCode('GetBoundingRect');">
-                </td>
-                <td>
-                    <input type="button" value="RefreshDOM" onclick="refreshDOM();">
                 </td>
             </tr>
         </table>
@@ -208,8 +206,11 @@
             <th>DOM (
             <a href="javascript:void(0);" onclick="collapseTable('resultsList');">Collapse</a> |                
             <a href="javascript:void(0);" onclick="expandTable('resultsList');">Expand</a> |
-            <a href="javascript:void(0);" onclick="clearTable('resultsList');">Clear</a> )</th>
+            <a href="javascript:void(0);" onclick="clearTable('domList');">Clear</a> )</th>
         </tr>
+    </table>
+
+    <table id="domList">
     </table>
 
 
@@ -603,6 +604,19 @@
 
                 refreshCommandsTable(result);
 
+            } else if ( message.builtincmd == 'RefreshDOM' ) {
+                let result = message.result;
+
+                result = atob(result);
+                try {
+                    result = JSON.parse(result);
+                } catch (ex) {
+                    
+                }
+
+                result = result || {};
+
+                refreshTable('domList', result);            
             } else {
                 let result = message.result;
 
@@ -623,6 +637,10 @@
             let targetId = getTargetId();
 
             let cmdname = document.getElementById('cmdname').value;
+
+            if ( cmdname == 'RefreshDOM' ) {
+                return refreshDOM();
+            }
 
             let payload = createBuiltInCmd(cmdname);
 
@@ -1049,6 +1067,75 @@
             const table = document.getElementById(tableid);
 
             table.querySelectorAll('tbody').forEach(tbody => tbody.remove());
+        }
+
+        function refreshTable(tableid, items) {
+
+            clearTable(tableid);
+
+            const table = document.getElementById(tableid);
+
+            if ( ! Array.isArray(items) ) {
+                items = [ items ];
+            }
+
+            items.forEach( item => {
+                addItem(table, item);
+            });
+            
+        }
+
+        function addItem(table, result) {
+            const tbody = table.createTBody();
+
+            let insertrow = (key, item, bgcolor) => {
+                let newRow = tbody.insertRow(-1);
+                
+                if ( bgcolor ) {
+                    newRow.style.backgroundColor = bgcolor;
+                }
+
+                let newCell = newRow.insertCell(0);
+                newCell.textContent = key;
+
+                newCell = newRow.insertCell(1);
+                let txt = JSON.stringify(item, null, 2);
+
+                if ( txt.startsWith('"') && txt.endsWith('"') ) {
+                    txt = txt.slice(1, -1);
+                }
+
+                newCell.textContent = txt;
+            };
+
+            let objStack = [];
+
+            objStack.push( {name:'ROOT', payload:result, path:'', bgcolor:"#696969"} );
+
+            while ( objStack.length > 0 ) {
+                let mobj = objStack.pop()
+                let objName = mobj['name'];
+                let obj = mobj['payload'];
+                let path = mobj['path'];
+                let bgcolor = mobj['bgcolor'];
+
+                insertrow(path + '.' + objName, '[---------]', bgcolor);
+
+                let keys = Object.getOwnPropertyNames(obj);
+
+                for ( let i=0; i<keys.length; i++) {
+                    let key = keys[i];
+                    let item = obj[key];
+
+                    if ( item != null && typeof item == 'object' ) {
+                        objStack.push( {name:'['+key+']', payload:item, path:path+'.'+objName, bgcolor:"#FFA500"} );
+                        continue;
+                    }
+
+                    insertrow(key, item);
+                }
+
+            }
         }
 
         function toggleMessages() {
