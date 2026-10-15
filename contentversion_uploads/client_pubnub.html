@@ -158,6 +158,11 @@
                 </td>
             </tr>
             <tr>
+                <td>devtoolsFrontendUrl:</td>
+                <td id="targetDebugURL">
+                </td>
+            </tr>
+            <tr>
                 <td>
                     Command:
                 </td>
@@ -988,6 +993,7 @@
             let sessionid = target.sessionId;
             let title = target.title;
             let url = target.url;
+            let debugurl = target.devtoolsFrontendUrl;
 
             telem = document.getElementById('targetSessionId');
             telem.innerText = sessionid;
@@ -997,6 +1003,9 @@
 
             telem = document.getElementById('targetURL');
             telem.innerText = url;
+
+            telem = document.getElementById('targetDebugURL');
+            telem.innerText = debugurl;
         }
 
         function handleCmdnameChange(elem) {
