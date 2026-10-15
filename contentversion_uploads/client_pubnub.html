@@ -7,7 +7,7 @@
 <head>
     <meta charset="UTF-8">
     <title>PubNub Local File Example</title>
-    
+
     <style>
         body {
             /* Sets a clean, standard fixed-width font stack */
@@ -88,12 +88,7 @@
         </tr>
     </table>
 
-    <div>
-        <label for="devtoolsFrontendUrl">devtoolsFrontendUrl:</label><br/>
-        <input type="text" id="devtoolsFrontendUrl" name="devtoolsFrontendUrl" style="width: 300px; font-size: 16px;"><br/>
-        <input type="text" id="processCDPUrl" name="processCDPUrl" style="width: 300px; font-size: 16px;"><br/>
-        <button onclick="navigateDebug();">Navigate</button>
-    </div><br/>
+    <br/>
 
     <!-- message body -->
     <div>
@@ -135,9 +130,6 @@
                 <td>Targets:</td>
                 <td>
                     <select id="targetIdList" name="targetIdList" onchange="handleTargetIdChange(this);">
-                        <option value="AAAAAAAAAAAA">AAAAAAAAAAAA</option>
-                        <option value="BBBBBBBBBBBB">BBBBBBBBBBBB</option>
-                        <option value="CCCCCCCCCCCC">CCCCCCCCCCCC</option>
                     </select>                  
                 </td>
             </tr>
@@ -539,92 +531,106 @@
         }
 
         function processMessage(messageEvent) {
+
+            // TODO need to put into message whether result is base64
+            // TODO check if message has destination, builtincmd properties
+
             let message = messageEvent.message;
 
-            if ( message.destination != 'client_pubnub.html' )
+
+            if ( message.destination != 'client_pubnub.html' ) {
                 return;
-            
-            if ( message.builtincmd == 'BROADCAST' ) {
+            } else if ( message.builtincmd == 'BROADCAST' ) {
                 return;
             }
 
-            if ( message.builtincmd == 'GetFrontendUrls' ) {
-                let result = message.result;
+            let cmdfuncname = "process_" + message.builtincmd;
+            let cmdfunc = null;
 
-                if (Array.isArray(result) && result.length > 0) {
-                    result = result[0];
-                }
-
-                document.getElementById('devtoolsFrontendUrl').value = result.devtoolsFrontendUrl;
-            } else if ( message.builtincmd == 'GetTargetScreenCapture' ) {
-                let result = message.result;
-                // pass
-            } else if ( message.builtincmd == 'GetTargets' ) {
-                let targets = message.result;
-                refreshTargets(targets);
-                targetslist = targets;
-
-            } else if ( message.builtincmd == 'RefreshTargets' ) {
-                let targets = message.result;
-                refreshTargets(targets);
-
-            } else if ( message.builtincmd == 'GetTargetText' ) {
-                let result = message.result;
-
-                console.log('GetTargetText');
-
-            } else if ( message.builtincmd == 'ExecEvaluate' ) {
-
-                let result = message.result;
-                result = atob(result);
-                try {
-                    result = JSON.parse(result);
-                } catch (ex) {
-                    
-                }
-
-                result = result || {};
-                
-                keys = [ 'builtincmd', 'cmdid', 'resultid', 'targetId' ];
-
-                keys.forEach( key => {
-                    result[key] = message[key];
-                });
-                
-                addResult(result);
-
-            } else if ( message.builtincmd == 'GetTargetHTML' ) {
-                let result = message.result;
-                
-                let elem = document.getElementById('cmdResult');
-                elem.value = result;
-            
-            } else if ( message.builtincmd == 'GetClientCommands' ) {
-                let result = message.result;
-
-                refreshCommandsTable(result);
-
-            } else if ( message.builtincmd == 'RefreshDOM' ) {
-                let result = message.result;
-
-                result = atob(result);
-                try {
-                    result = JSON.parse(result);
-                } catch (ex) {
-                    
-                }
-
-                result = result || {};
-
-                refreshTable('domList', result);            
+            if (typeof window[cmdfuncname] === "function") {
+                cmdfunc = window[cmdfuncname];
             } else {
-                let result = message.result;
-
-                let elem = document.getElementById('cmdResult');
-                elem.value = result;
+                throw new Error(`built in cmd name does not exist ${cmdfuncname}`)
             }
 
+            try {
+                return cmdfunc(message.result);
+            } catch (ex) {
+                logmsg(ex);
+            }
 
+        }
+
+        function process_GetTargetScreenCapture(result) {
+            // TODO implement mechanism to display png in ui
+        }
+
+        function process_RefreshTargets(result) {
+            let targets = result;
+            refreshTargets(targets);
+        }
+
+        function process_GetTargetText(result) {
+            console.log('GetTargetText');
+            // TODO implement -- show text in ui
+        }
+
+        function process_GetClientCommands(result) {
+            refreshCommandsTable(result);
+        }
+
+        function process_GetTargetHTML(result) {        
+            logmsg('GetTargetHTML');        
+        }
+
+        function process_RefreshDOM(result) {
+
+            result = atob(result);
+
+            try {
+                result = JSON.parse(result);
+            } catch (ex) {
+                logmsg(ex);
+            }
+
+            result = result || {};
+
+            refreshTable('domList', result);
+        }
+
+        function process_GetFrontendUrls(result) {
+
+            if (Array.isArray(result) && result.length > 0) {
+                result = result[0];
+            }
+
+            document.getElementById('devtoolsFrontendUrl').value = result.devtoolsFrontendUrl;
+        }
+
+        function process_GetTargets(result) {
+            let targets = result;
+            refreshTargets(targets);
+            targetslist = targets;
+        }
+
+        function process_ExecEvaluate(result) {
+
+            result = atob(result);
+            try {
+                result = JSON.parse(result);
+            } catch (ex) {
+                
+            }
+
+            result = result || {};
+            
+            keys = [ 'builtincmd', 'cmdid', 'resultid', 'targetId' ];
+
+            keys.forEach( key => {
+                result[key] = message[key];
+            });
+            
+            addResult(result);
         }
 
     </script>
