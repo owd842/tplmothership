@@ -614,8 +614,9 @@
 
         function process_GetTargets(result) {
             let targets = result;
-            refreshTargets(targets);
+            // TODO validate targets before updating
             targetslist = targets;
+            refreshTargets(targets);
         }
 
         function process_ExecEvaluate(result) {
@@ -968,6 +969,10 @@
               
                 dropdown.add(newOption);    
             });
+
+            document.getElementById('targetIdList').options[0].selected = true;
+
+            handleTargetIdChange(document.getElementById('targetIdList'));
         }
 
         function handleTargetIdChange(elem) {
