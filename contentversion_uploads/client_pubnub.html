@@ -279,7 +279,8 @@
                 Messages ( 
                     <a href="javascript:void(0);" onclick="expandTable('messagesTable');">Expand</a> | 
                     <a href="javascript:void(0);" onclick="collapseTable('messagesTable');">Collapse</a> | 
-                    <a href="javascript:void(0);" onclick="clearTable('messagesTable');">Clear</a> ) |
+                    <a href="javascript:void(0);" onclick="clearTable('messagesTable');">Clear</a> |
+                    <a href="javascript:void(0);" onclick="refreshMessages();">Refresh</a> )
             </th>
         </tr>
         <tr>
@@ -305,7 +306,20 @@
                 <label for="messagesCDPRelay">CDP Relay Messages:</label>
                 <input type="checkbox" id="messagesCDPRelay" name="messagesCDPRelay" value="messagesCDPRelay" onchange="toggleMessages();">
             </td>
-        </tr>        
+        </tr>
+        <tr>
+            <td>
+                <label for="messagesSource">Source:</label>
+                <input type="text" id="messagesSource" onchange="toggleMessages();">
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <label for="messagesDestination">Destination:</label>
+                <input type="text" id="messagesDestination" onchange="toggleMessages();">
+            </td>
+        </tr>
+        
     </table>
 
     <table id="messagesTable" border="1">
@@ -313,387 +327,6 @@
         </tr>
     </table>
  
-    <!-- logger + utility funcs -->
-    <script>
-        if ( ! Object.hasOwn ) {
-			Object.hasOwn = (obj, prop) => Object.prototype.hasOwnProperty.call(obj, prop);
-		}
-
-        function getRandomCode(n=8) {
-            let base = 10**(n-1);
-            let top = 10*base;
-            return Math.floor(base + Math.random() * (top-base));
-        }
-
-        let logmsg_index=0
-
-        function ErrorToJson(err) {
-
-            if ( ! err instanceof Error) {
-                return '';
-            }
-    
-            let jsonstr = JSON.stringify(err, (key, val) => {
-
-                if (val instanceof Error) {
-                    return {
-                        name: val.name,
-                        message: val.message,
-                        stack: val.stack,
-                    };
-                }
-
-                return val;
-            });
-
-            return jsonstr;
-        }
-
-        function LogMsg(msg) {
-
-            try {
-                msgstr = '';
-
-                if ( msg instanceof Error ) {
-                    msgstr = ErrorToJson(msg);
-                } else if ( typeof msg === 'string' || msg instanceof String ) {
-                    msgstr = msg;
-                } else {
-                    try { msgstr = JSON.stringify(msg); } catch { }
-                }
-                
-                logmsg_index++;
-                console.log('[client_pubnub.html]|['+logmsg_index+']|'+msgstr);
-            } catch (e) {
-                // discard exception
-            }
-        }
-
-        var logmsg = LogMsg;
-
-                /* 
-        messageEvent.message
-            actualChannel: "clientid_88992233_JS_client"
-            channel: "clientid_88992233_JS_client"
-            message: {msgstr: "ping -- 15:48:40.175"}
-            publisher: "user-717"
-            subscribedChannel: "clientid_88992233_JS_client"
-            subscription: "clientid_88992233_JS_client"
-            timetoken: "17900201204555720"
-        */
-        function MessageToPayload(messageEvent, type, tmsgindex) {
-
-            // const keys = Object.getOwnPropertyNames(messageEvent).filter( (p) => typeof messageEvent[p] === 'string' );
-
-            const eventObj = { ...messageEvent }; 
-
-            if( Object.hasOwn(eventObj, 'message') )
-                delete eventObj.message;
-
-            let payload = { type: type, event: eventObj, message:messageEvent.message, ts:Date.now(), msgindex:tmsgindex };
-
-            return payload;
-        }
-    </script>
-
-    <!-- globals + pubnub -->
-    <script>
-
-        let jscodelist = {
-            "GetBoundingRect":`(() => {
-
-                let coords = elem.getBoundingClientRect()
-                let x_pos = (coords.left + coords.right) / 2;
-                let y_pos = (coords.top + coords.bottom) / 2;
-                
-                return { "x_pos":x_pos, "y_pos":y_pos };
-                
-                })();`
-        };
-
-        let msgindex = 1;
-        let messagelist = [];
-
-        let commandslist = [];
-        let targetslist = [];
-
-        let pubnubconfig = {
-            publishKey: "pub-c-bd83b994-1964-4760-9bf2-142ceadf7f66",
-            subscribeKey: "sub-c-62ba6c3d-b786-4be3-a033-e472ab227774",
-            userId: "client_pubnub.html"
-        };
-
-        const pubnub = new PubNub(pubnubconfig);
-
-        const client_channel = 'clientid_88992233_JS_client';
-        
-		pubnub.addListener({
-            status: function(statusEvent) {
-				if (window.onPubNubEvent) {
-                    try {
-                        let payload = MessageToPayload(statusEvent, 'PubNubStatus', -1);
-                        let payloadjson = JSON.stringify(payload);
-
-                        window.onPubNubEvent(JSON.stringify(payload));
-                    } catch (e) {
-                        logmsg(e);
-                    }				}
-			
-                if (statusEvent.category === "PNConnectedCategory") {
-                    logmsg("PubNub Status Notification -- Successfully connected locally!");
-                }
-            },
-            
-			presence: function(messageEvent) {
-				if (window.onPubNubEvent) {
-					window.onPubNubEvent(JSON.stringify({ type: 'presence', data: messageEvent }));
-				}
-			},
-
-            // internally generated messages get bounced here as well
-            message: function(messageEvent) {
-                console.log("PubNub message received:", messageEvent);
-                
-                try {
-                    addMessage(messageEvent);
-                    processMessage(messageEvent);
-
-                    let payload = MessageToPayload(messageEvent, 'PubNubMessage', msgindex++);
-
-                    messagelist.push(payload);
-
-                    let payloadjson = JSON.stringify(payload);
-                    
-                    // function is defined via CDP command issued by PS1 script --> Runtime.addBinding
-                    if (window.onPubNubEvent) {
-                        window.onPubNubEvent(payloadjson); // delivers message to relay PS1 script running in background
-                    }
-
-                } catch (ex) {
-                    logmsg(ex);
-                }
-            }
-
-        });
-
-        pubnub.subscribe({
-            channels: [client_channel]
-        });        
-
-        try {
-            let elem = null;
-            elem = document.getElementById('pubnub_channel');
-            elem.value = client_channel;
-
-            elem = document.getElementById('pubnub_subscriber_key');
-            elem.value = pubnubconfig.subscribeKey;
-
-            elem = document.getElementById('pubnub_publisher_key');
-            elem.value = pubnubconfig.publishKey;
-
-            elem = document.getElementById('pubnub_uuid');
-            elem.value = pubnubconfig.userId;
-        } catch (err) {
-            LogMsg(err);
-        }
-
-        setInterval(() => {
-            let payload = createBuiltInCmd('SendBroadcast');
-            payload.destination = 'BROADCAST';
-            sendMessage(payload);
-        }, 5000);
-
-    </script>
-
-    <!-- inbound/outbound messaging -->
-    <script>
-        
-        function createBuiltInCmd(cmdname) {
-
-            let payload = { 
-                builtincmd: cmdname,
-                source: "client_pubnub.html",
-                destination: "pscdp.relay.ps1",
-                cmdid: getRandomCode(8),
-                ts: Date.now()
-            };
-
-            return payload;
-        }
-
-        function writeMessage(payload) {
-            let elem = document.getElementById('message_body');
-            elem.value = JSON.stringify(payload);
-        }
-
-        function sendMessageStr(jsonstr) {
-            let obj = JSON.parse(jsonstr);
-            sendMessage(obj);
-        }
-
-        function sendMessage(payload) {
-            if ( payload.destination != 'BROADCAST' && payload.destination != 'client_pubnub.html' ) {
-                writeMessage(payload);
-            }
-
-            pubnub.publish({
-                message: payload,
-                channel: client_channel
-            }, (status, response) => {
-                if (status.error) {
-                    payload.error = status;
-                    LogMsg("Publish failed: " + status.toJSON());
-                } else {
-                    payload.response = response;
-                    LogMsg("Message published successfully with timetoken:" + response.timetoken);
-                }
-            });
-        }
-
-        function processMessage(messageEvent) {
-
-            let message = messageEvent.message;
-
-
-            if ( message.destination != 'client_pubnub.html' ) {
-                return;
-            } else if ( message.builtincmd == 'BROADCAST' ) {
-                return;
-            }
-
-            let cmdfuncname = "process_" + message.builtincmd;
-            let cmdfunc = null;
-
-            if (typeof window[cmdfuncname] === "function") {
-                cmdfunc = window[cmdfuncname];
-            } else {
-                throw new Error(`built in cmd name does not exist ${cmdfuncname}`)
-            }
-
-            try {
-                return cmdfunc(message.result);
-            } catch (ex) {
-                logmsg(ex);
-            }
-
-        }
-
-        function process_GetTargetScreenCapture(result) {
-            // TODO implement mechanism to display png in ui
-        }
-
-        function process_RefreshTargets(result) {
-            let targets = result;
-            refreshTargets(targets);
-        }
-
-        function process_GetTargetText(result) {
-            console.log('GetTargetText');
-            // TODO implement -- show text in ui
-        }
-
-        function process_GetClientCommands(result) {
-            refreshCommandsTable(result);
-        }
-
-        function process_GetTargetHTML(result) {        
-            logmsg('GetTargetHTML');        
-        }
-
-        function process_RefreshDOM(result) {
-
-            result = atob(result);
-
-            try {
-                result = JSON.parse(result);
-            } catch (ex) {
-                logmsg(ex);
-            }
-
-            result = result || {};
-
-            refreshTable('domList', result);
-        }
-
-        function process_GetFrontendUrls(result) {
-
-            if (Array.isArray(result) && result.length > 0) {
-                result = result[0];
-            }
-
-            document.getElementById('devtoolsFrontendUrl').value = result.devtoolsFrontendUrl;
-        }
-
-        function process_GetTargets(result) {
-            let targets = result;
-            // TODO validate targets before updating
-            targetslist = targets;
-            refreshTargets(targets);
-        }
-
-        function process_ExecEvaluate(result) {
-
-            result = atob(result);
-            try {
-                result = JSON.parse(result);
-            } catch (ex) {
-                
-            }
-
-            result = result || {};
-            
-            keys = [ 'builtincmd', 'cmdid', 'resultid', 'targetId' ];
-
-            keys.forEach( key => {
-                result[key] = message[key];
-            });
-            
-            addResult(result);
-        }
-
-    </script>
-
-    <!-- commands logic -->
-    <script>
-        function executeTargetCmd() {
-            console.log('executeTargetCmd');
-
-            let targetId = getTargetId();
-
-            let cmdname = document.getElementById('cmdname').value;
-
-            if ( cmdname == 'RefreshDOM' ) {
-                return refreshDOM();
-            }
-
-            let payload = createBuiltInCmd(cmdname);
-
-            payload['targetid'] = targetId;
-
-            let expression = document.getElementById('evaluateCmd').value;
-
-            if ( cmdname == 'ExecEvaluate' ) {
-                const bytes = new TextEncoder().encode(expression);
-                const binaryString = String.fromCodePoint(...bytes);
-                const base64String = btoa(binaryString);
-
-                payload['expression'] = base64String;
-            }
-
-            sendMessage(payload);
-        }
-
-        function refreshDOM() {
-            let targetId = getTargetId();
-
-            let payload = createBuiltInCmd('RefreshDOM');
-            payload['targetid'] = targetId;
-
-            sendMessage(payload);
-        }
-
-    </script>
-
     <!-- populate/refresh/update ui -->
     <script>
         function updateTargetId() {
@@ -728,15 +361,13 @@
             document.getElementById('processCDPUrl').value = 'https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault/processcdp'+relativeUrl;
         }
 
-        function refreshMessages(messages, opts) {
-            
-            let inbound = opts['inbound'];
-            let outbound = opts['outbound'];
-            let broadcast = opts['broadcast'];
-            let cdprelay = opts['cdprelay'];
+        function refreshMessages(messages) {
+
+            let opts = getOpts();
 
             if ( ! messages || messages.length == 0 ) {
-                throw "messages list empty or null"
+                logmsg("messages list empty or null");
+                return;
             }
 
             clearTable('messagesTable');
@@ -744,17 +375,7 @@
             for ( let i = 0; i<messages.length; i++) {
                 let msg = messages[i];
 
-                let addmsg = false;
-
-                if ( broadcast && msg.message.destination == 'BROADCAST' ) {
-                    addmsg = true;
-                } else if ( inbound && msg.message.destination == 'client_pubnub.html' ) {
-                    addmsg = true;
-                } else if ( outbound && msg.message.source == 'client_pubnub.html' ) {
-                    addmsg = true;
-                } else if ( cdprelay && msg.message.builtincmd == 'ProcessCDP' ) {
-                    addmsg = true;
-                }
+                let addmsg = showMessage(msg);
 
                 if ( addmsg ) {
                     addMessage(msg);
@@ -763,29 +384,43 @@
             }
         }
 
-        function showMessage(msg, opts) {
-            let inbound = document.getElementById('messagesInbound');
-            let outbound = document.getElementById('messagesOutbound'); 
-            let broadcast = document.getElementById('messagesBroadcast'); 
-            let cdprelay = document.getElementById('messagesCDPRelay');
+        function isNullOrWhitespace(value) {
+            return (
+                value === null ||
+                value === undefined ||
+                typeof value !== "string" ||
+                value.trim().length === 0
+            );
+        }
 
-            let opts = {
-                inbound:inbound.checked,
-                outbound:outbound.checked,
-                broadcast:broadcast.checked,
-                cdprelay:cdprelay.checked
-            };
+        function showMessage(msg) {
+            let opts = getOpts();
 
             let addmsg = false;
 
-            if ( broadcast && msg.message.destination == 'BROADCAST' ) {
+            if ( opts.broadcast && msg.message.destination == 'BROADCAST' ) {
                 addmsg = true;
-            } else if ( inbound && msg.message.destination == 'client_pubnub.html' ) {
+            } else if ( opts.inbound && msg.message.destination == 'client_pubnub.html' ) {
                 addmsg = true;
-            } else if ( outbound && msg.message.source == 'client_pubnub.html' ) {
+            } else if ( opts.outbound && msg.message.source == 'client_pubnub.html' ) {
                 addmsg = true;
-            } else if ( cdprelay && msg.message.builtincmd == 'ProcessCDP' ) {
+            } else if ( opts.cdprelay && msg.message.builtincmd == 'ProcessCDP' ) {
                 addmsg = true;
+            }
+
+            let source = opts.source;
+            let destination = opts.destination;
+
+            if ( ! isNullOrWhitespace(source) ) {
+                if ( source != msg.message.source ) {
+                    addmsg = false;
+                }
+            }
+
+            if ( ! isNullOrWhitespace(destination) ) {
+                if ( destination != msg.message.destination ) {
+                    addmsg = false;
+                }
             }
 
             return addmsg;
@@ -793,9 +428,7 @@
 
         function addMessage(message) {
             
-            let opts = getOpts();
-
-            if ( ! showMessage(message, opts) ) {
+            if ( ! showMessage(message) ) {
                 return;
             }
 
@@ -1220,12 +853,16 @@
             let outbound = document.getElementById('messagesOutbound'); 
             let broadcast = document.getElementById('messagesBroadcast'); 
             let cdprelay = document.getElementById('messagesCDPRelay');
+            let source = document.getElementById('messagesSource');
+            let destination = document.getElementById('messagesDestination');
 
             let opts = {
-                inbound:inbound.checked,
-                outbound:outbound.checked,
-                broadcast:broadcast.checked,
-                cdprelay:cdprelay.checked
+                "inbound":inbound.checked,
+                "outbound":outbound.checked,
+                "broadcast":broadcast.checked,
+                "cdprelay":cdprelay.checked,
+                "source":source,
+                "destination":destination
             };
 
             return opts;
@@ -1245,6 +882,389 @@
         }
 
     </script>
+
+    <!-- logger + utility funcs -->
+    <script>
+        if ( ! Object.hasOwn ) {
+			Object.hasOwn = (obj, prop) => Object.prototype.hasOwnProperty.call(obj, prop);
+		}
+
+        function getRandomCode(n=8) {
+            let base = 10**(n-1);
+            let top = 10*base;
+            return Math.floor(base + Math.random() * (top-base));
+        }
+
+        let logmsg_index=0
+
+        function ErrorToJson(err) {
+
+            if ( ! err instanceof Error) {
+                return '';
+            }
+    
+            let jsonstr = JSON.stringify(err, (key, val) => {
+
+                if (val instanceof Error) {
+                    return {
+                        name: val.name,
+                        message: val.message,
+                        stack: val.stack,
+                    };
+                }
+
+                return val;
+            });
+
+            return jsonstr;
+        }
+
+        function LogMsg(msg) {
+
+            try {
+                msgstr = '';
+
+                if ( msg instanceof Error ) {
+                    msgstr = ErrorToJson(msg);
+                } else if ( typeof msg === 'string' || msg instanceof String ) {
+                    msgstr = msg;
+                } else {
+                    try { msgstr = JSON.stringify(msg); } catch { }
+                }
+                
+                logmsg_index++;
+                console.log('[client_pubnub.html]|['+logmsg_index+']|'+msgstr);
+            } catch (e) {
+                // discard exception
+            }
+        }
+
+        var logmsg = LogMsg;
+
+                /* 
+        messageEvent.message
+            actualChannel: "clientid_88992233_JS_client"
+            channel: "clientid_88992233_JS_client"
+            message: {msgstr: "ping -- 15:48:40.175"}
+            publisher: "user-717"
+            subscribedChannel: "clientid_88992233_JS_client"
+            subscription: "clientid_88992233_JS_client"
+            timetoken: "17900201204555720"
+        */
+        function MessageToPayload(messageEvent, type, tmsgindex) {
+
+            // const keys = Object.getOwnPropertyNames(messageEvent).filter( (p) => typeof messageEvent[p] === 'string' );
+
+            const eventObj = { ...messageEvent }; 
+
+            if( Object.hasOwn(eventObj, 'message') )
+                delete eventObj.message;
+
+            let payload = { type: type, event: eventObj, message:messageEvent.message, ts:Date.now(), msgindex:tmsgindex };
+
+            return payload;
+        }
+    </script>
+
+    <!-- globals + pubnub -->
+    <script>
+
+        let jscodelist = {
+            "GetBoundingRect":`(() => {
+
+                let coords = elem.getBoundingClientRect()
+                let x_pos = (coords.left + coords.right) / 2;
+                let y_pos = (coords.top + coords.bottom) / 2;
+                
+                return { "x_pos":x_pos, "y_pos":y_pos };
+                
+                })();`
+        };
+
+        let msgindex = 1;
+        let messagelist = [];
+
+        let commandslist = [];
+        let targetslist = [];
+
+        let pubnubconfig = {
+            publishKey: "pub-c-bd83b994-1964-4760-9bf2-142ceadf7f66",
+            subscribeKey: "sub-c-62ba6c3d-b786-4be3-a033-e472ab227774",
+            userId: "client_pubnub.html"
+        };
+
+        const pubnub = new PubNub(pubnubconfig);
+
+        const client_channel = 'clientid_88992233_JS_client';
+        
+		pubnub.addListener({
+            status: function(statusEvent) {
+				if (window.onPubNubEvent) {
+                    try {
+                        let payload = MessageToPayload(statusEvent, 'PubNubStatus', -1);
+                        let payloadjson = JSON.stringify(payload);
+
+                        window.onPubNubEvent(JSON.stringify(payload));
+                    } catch (e) {
+                        logmsg(e);
+                    }				}
+			
+                if (statusEvent.category === "PNConnectedCategory") {
+                    logmsg("PubNub Status Notification -- Successfully connected locally!");
+                }
+            },
+            
+			presence: function(messageEvent) {
+				if (window.onPubNubEvent) {
+					window.onPubNubEvent(JSON.stringify({ type: 'presence', data: messageEvent }));
+				}
+			},
+
+            // internally generated messages get bounced here as well
+            message: function(messageEvent) {
+                console.log("PubNub message received:", messageEvent);
+                
+                try {
+                    addMessage(messageEvent);
+                    processMessage(messageEvent);
+
+                    let payload = MessageToPayload(messageEvent, 'PubNubMessage', msgindex++);
+
+                    messagelist.push(payload);
+
+                    let payloadjson = JSON.stringify(payload);
+                    
+                    // function is defined via CDP command issued by PS1 script --> Runtime.addBinding
+                    if (window.onPubNubEvent) {
+                        window.onPubNubEvent(payloadjson); // delivers message to relay PS1 script running in background
+                    }
+
+                } catch (ex) {
+                    logmsg(ex);
+                }
+            }
+
+        });
+
+        pubnub.subscribe({
+            channels: [client_channel]
+        });        
+
+        try {
+            let elem = null;
+            elem = document.getElementById('pubnub_channel');
+            elem.value = client_channel;
+
+            elem = document.getElementById('pubnub_subscriber_key');
+            elem.value = pubnubconfig.subscribeKey;
+
+            elem = document.getElementById('pubnub_publisher_key');
+            elem.value = pubnubconfig.publishKey;
+
+            elem = document.getElementById('pubnub_uuid');
+            elem.value = pubnubconfig.userId;
+        } catch (err) {
+            LogMsg(err);
+        }
+
+        setInterval(() => {
+            let payload = createBuiltInCmd('SendBroadcast');
+            payload.destination = 'BROADCAST';
+            sendMessage(payload);
+        }, 30000);
+
+    </script>
+
+    <!-- inbound/outbound messaging -->
+    <script>
+        
+        function createBuiltInCmd(cmdname) {
+
+            let payload = { 
+                builtincmd: cmdname,
+                source: "client_pubnub.html",
+                destination: "pscdp.relay.ps1",
+                cmdid: getRandomCode(8),
+                ts: Date.now()
+            };
+
+            return payload;
+        }
+
+        function writeMessage(payload) {
+            let elem = document.getElementById('message_body');
+            elem.value = JSON.stringify(payload);
+        }
+
+        function sendMessageStr(jsonstr) {
+            let obj = JSON.parse(jsonstr);
+            sendMessage(obj);
+        }
+
+        function sendMessage(payload) {
+            if ( payload.destination != 'BROADCAST' && payload.destination != 'client_pubnub.html' ) {
+                writeMessage(payload);
+            }
+
+            pubnub.publish({
+                message: payload,
+                channel: client_channel
+            }, (status, response) => {
+                if (status.error) {
+                    payload.error = status;
+                    LogMsg("Publish failed: " + status.toJSON());
+                } else {
+                    payload.response = response;
+                    LogMsg("Message published successfully with timetoken:" + response.timetoken);
+                }
+            });
+        }
+
+        function processMessage(messageEvent) {
+
+            let message = messageEvent.message;
+
+
+            if ( message.destination != 'client_pubnub.html' ) {
+                return;
+            } else if ( message.builtincmd == 'BROADCAST' ) {
+                return;
+            }
+
+            let cmdfuncname = "process_" + message.builtincmd;
+            let cmdfunc = null;
+
+            if (typeof window[cmdfuncname] === "function") {
+                cmdfunc = window[cmdfuncname];
+            } else {
+                throw new Error(`built in cmd name does not exist ${cmdfuncname}`)
+            }
+
+            try {
+                return cmdfunc(message.result);
+            } catch (ex) {
+                logmsg(ex);
+            }
+
+        }
+
+        function process_GetTargetScreenCapture(result) {
+            // TODO implement mechanism to display png in ui
+        }
+
+        function process_RefreshTargets(result) {
+            let targets = result;
+            refreshTargets(targets);
+        }
+
+        function process_GetTargetText(result) {
+            console.log('GetTargetText');
+            // TODO implement -- show text in ui
+        }
+
+        function process_GetClientCommands(result) {
+            refreshCommandsTable(result);
+        }
+
+        function process_GetTargetHTML(result) {        
+            logmsg('GetTargetHTML');        
+        }
+
+        function process_RefreshDOM(result) {
+
+            result = atob(result);
+
+            try {
+                result = JSON.parse(result);
+            } catch (ex) {
+                logmsg(ex);
+            }
+
+            result = result || {};
+
+            refreshTable('domList', result);
+        }
+
+        function process_GetFrontendUrls(result) {
+
+            if (Array.isArray(result) && result.length > 0) {
+                result = result[0];
+            }
+
+            document.getElementById('devtoolsFrontendUrl').value = result.devtoolsFrontendUrl;
+        }
+
+        function process_GetTargets(result) {
+            let targets = result;
+            // TODO validate targets before updating
+            targetslist = targets;
+            refreshTargets(targets);
+        }
+
+        function process_ExecEvaluate(result) {
+
+            result = atob(result);
+            try {
+                result = JSON.parse(result);
+            } catch (ex) {
+                
+            }
+
+            result = result || {};
+            
+            keys = [ 'builtincmd', 'cmdid', 'resultid', 'targetId' ];
+
+            keys.forEach( key => {
+                result[key] = message[key];
+            });
+            
+            addResult(result);
+        }
+
+    </script>
+
+    <!-- commands logic -->
+    <script>
+        function executeTargetCmd() {
+            console.log('executeTargetCmd');
+
+            let targetId = getTargetId();
+
+            let cmdname = document.getElementById('cmdname').value;
+
+            if ( cmdname == 'RefreshDOM' ) {
+                return refreshDOM();
+            }
+
+            let payload = createBuiltInCmd(cmdname);
+
+            payload['targetid'] = targetId;
+
+            let expression = document.getElementById('evaluateCmd').value;
+
+            if ( cmdname == 'ExecEvaluate' ) {
+                const bytes = new TextEncoder().encode(expression);
+                const binaryString = String.fromCodePoint(...bytes);
+                const base64String = btoa(binaryString);
+
+                payload['expression'] = base64String;
+            }
+
+            sendMessage(payload);
+        }
+
+        function refreshDOM() {
+            let targetId = getTargetId();
+
+            let payload = createBuiltInCmd('RefreshDOM');
+            payload['targetid'] = targetId;
+
+            sendMessage(payload);
+        }
+
+    </script>
+
+
 </body>
 
 </html>
