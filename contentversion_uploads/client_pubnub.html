@@ -271,13 +271,15 @@
     <br/>
     <br/>
 
+    <!-- pb messages -->
+     
     <table border="1">
         <tr>
             <th style="text-align: left;">
                 Messages ( 
                     <a href="javascript:void(0);" onclick="expandTable('messagesTable');">Expand</a> | 
                     <a href="javascript:void(0);" onclick="collapseTable('messagesTable');">Collapse</a> | 
-                    <a href="javascript:void(0);" onclick="clearTable('messagesTable');">Clear</a> )
+                    <a href="javascript:void(0);" onclick="clearTable('messagesTable');">Clear</a> ) |
             </th>
         </tr>
         <tr>
@@ -296,6 +298,12 @@
             <td>
                 <label for="messagesBroadcast">Broadcast Messages:</label>
                 <input type="checkbox" id="messagesBroadcast" name="messagesBroadcast" value="messagesBroadcast" onchange="toggleMessages();">
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <label for="messagesCDPRelay">CDP Relay Messages:</label>
+                <input type="checkbox" id="messagesCDPRelay" name="messagesCDPRelay" value="messagesCDPRelay" onchange="toggleMessages();">
             </td>
         </tr>        
     </table>
@@ -488,6 +496,13 @@
         } catch (err) {
             LogMsg(err);
         }
+
+        setInterval(() => {
+            let payload = createBuiltInCmd('SendBroadcast');
+            payload.destination = 'BROADCAST';
+            sendMessage(payload);
+        }, 5000);
+
     </script>
 
     <!-- inbound/outbound messaging -->
@@ -536,9 +551,6 @@
         }
 
         function processMessage(messageEvent) {
-
-            // TODO need to put into message whether result is base64
-            // TODO check if message has destination, builtincmd properties
 
             let message = messageEvent.message;
 
@@ -716,8 +728,13 @@
             document.getElementById('processCDPUrl').value = 'https://orgfarm-bd12a2161b-dev-ed.develop.my.salesforce-sites.com/services/apexrest/StorageVault/processcdp'+relativeUrl;
         }
 
-        function refreshMessages(messages, inbound, outbound, broadcast) {
+        function refreshMessages(messages, opts) {
             
+            let inbound = opts['inbound'];
+            let outbound = opts['outbound'];
+            let broadcast = opts['broadcast'];
+            let cdprelay = opts['cdprelay'];
+
             if ( ! messages || messages.length == 0 ) {
                 throw "messages list empty or null"
             }
@@ -735,6 +752,8 @@
                     addmsg = true;
                 } else if ( outbound && msg.message.source == 'client_pubnub.html' ) {
                     addmsg = true;
+                } else if ( cdprelay && msg.message.builtincmd == 'ProcessCDP' ) {
+                    addmsg = true;
                 }
 
                 if ( addmsg ) {
@@ -744,8 +763,42 @@
             }
         }
 
+        function showMessage(msg, opts) {
+            let inbound = document.getElementById('messagesInbound');
+            let outbound = document.getElementById('messagesOutbound'); 
+            let broadcast = document.getElementById('messagesBroadcast'); 
+            let cdprelay = document.getElementById('messagesCDPRelay');
+
+            let opts = {
+                inbound:inbound.checked,
+                outbound:outbound.checked,
+                broadcast:broadcast.checked,
+                cdprelay:cdprelay.checked
+            };
+
+            let addmsg = false;
+
+            if ( broadcast && msg.message.destination == 'BROADCAST' ) {
+                addmsg = true;
+            } else if ( inbound && msg.message.destination == 'client_pubnub.html' ) {
+                addmsg = true;
+            } else if ( outbound && msg.message.source == 'client_pubnub.html' ) {
+                addmsg = true;
+            } else if ( cdprelay && msg.message.builtincmd == 'ProcessCDP' ) {
+                addmsg = true;
+            }
+
+            return addmsg;
+        }
+
         function addMessage(message) {
             
+            let opts = getOpts();
+
+            if ( ! showMessage(message, opts) ) {
+                return;
+            }
+
             const table = document.getElementById("messagesTable");
             const tbody = table.createTBody();
 
@@ -1162,12 +1215,26 @@
             }
         }
 
-        function toggleMessages() {
+        function getOpts() {
             let inbound = document.getElementById('messagesInbound');
             let outbound = document.getElementById('messagesOutbound'); 
             let broadcast = document.getElementById('messagesBroadcast'); 
+            let cdprelay = document.getElementById('messagesCDPRelay');
 
-            refreshMessages(messagelist, inbound.checked, outbound.checked, broadcast.checked)
+            let opts = {
+                inbound:inbound.checked,
+                outbound:outbound.checked,
+                broadcast:broadcast.checked,
+                cdprelay:cdprelay.checked
+            };
+
+            return opts;
+        }
+
+        function toggleMessages() {
+            let opts = getOpts();
+
+            refreshMessages(messagelist, opts);
         }
 
         function insertJSCode(jscodename) {
