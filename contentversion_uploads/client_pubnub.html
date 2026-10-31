@@ -1073,6 +1073,10 @@
             sendMessage(payload);
         }, 30000);
 
+        setInterval(() => {
+            logmsg('ping ' + getRandomCode(8));
+        }, 5000);
+
     </script>
 
     <!-- inbound/outbound messaging -->
