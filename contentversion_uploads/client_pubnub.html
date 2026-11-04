@@ -197,6 +197,13 @@
 
     <br/>
 
+    <!-- screen capture -->
+    <div id="screen_capture">
+
+    </div>
+
+    <br/>
+
     <!-- DOM explorer -->
     <table border="1">
         <tr>
@@ -675,8 +682,6 @@
             telem = document.getElementById('targetIdList');
             telem.value = elem.value;
 
-            // anchor
-
             let target = targetslist.find(target => {
                 return target.targetId == targetid; 
             });
@@ -1145,15 +1150,59 @@
             }
 
             try {
-                return cmdfunc(message.result);
+                return cmdfunc(message.result, message);
             } catch (ex) {
                 logmsg(ex);
             }
 
         }
 
-        function process_GetTargetScreenCapture(result) {
-            // TODO implement mechanism to display png in ui
+        screencapture_chunks=[];
+
+        function process_GetTargetScreenCapture(result, message) {
+            // anchor
+            let chunkcount = message['chunkcount']
+            let chunksize = message['chunksize']
+            let chunkindex = message['chunkindex']
+            let remainderlength = message['remainderlength']
+            let imagedata = result['imagedata']
+            
+            screencapture_chunks.push({
+                chunkcount:chunkcount,
+                chunksize:chunksize,
+                chunkindex:chunkindex,
+                remainderlength:remainderlength,
+                imagedata:imagedata
+            });
+
+            if ( chunkindex == chunkcount - 1 ) {
+                combineChunks();
+            }
+        }
+
+        function combineChunks() {
+            console.log('combineChunks');
+
+            screencapture_chunks.sort((a, b) => Number(a.chunkindex) - Number(b.chunkindex));
+
+            let imagestr = '';
+            
+            for ( let i = 0; i<screencapture_chunks.length;i++) {
+                imagestr += screencapture_chunks[i].imagedata;
+            }
+
+            screencapture_chunks = [];
+
+            const containerDiv = document.getElementById('screen_capture');
+
+            const base64String = 'data:image/png;base64,'+imagestr;
+
+            const img = document.createElement('img');
+
+            img.src = base64String;
+            img.alt = 'Inserted Base64 Image';
+
+            containerDiv.appendChild(img);
         }
 
         function process_RefreshTargets(result) {
